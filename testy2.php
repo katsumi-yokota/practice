@@ -23,7 +23,7 @@
            if(file_exists('entry_data.json'))
            {
                 $current_data = file_get_contents('entry_data.json'); //ファイルの全内容を文字列に読み込む
-                $array_data = json_decode($current_data, true); //配列の中で条件に合致するものがあればtrueを返す
+                $array_data = json_decode($current_data, true); //json_decodeでJSON文字列をデコード(復号)する
                 //連想配列               
                 $extra = array(
                      'name' => $_POST['name'],
@@ -95,4 +95,3 @@
  </body>
  <footer class='text-center'>(c) shimoning.com</footer>
  </html>
- 
