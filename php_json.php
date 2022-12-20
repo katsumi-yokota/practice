@@ -8,42 +8,30 @@ if(empty($json)) {
   return;
 }
 // 変数jsonをjson_decodeでデコード（復号）
-$data = json_decode($json, true);
+$documents = json_decode($json, true);
 
 // var_dumpで変数について調べる
-//var_dump($data); 
+//var_dump($documents); 
 
 // 条件分岐
-if (empty($data)) {
-  echo '空です！' . PHP_EOL;
+if (empty($documents)) {
+  echo '空です！';
   return;
 }
 
-//foreach&連想配列
-$dataa = [
-        '名前' => '$data['name']',
-        '所属' => '$data['department'],
-        'メッセージ' => '$data['text']
-];
-
-foreach ($dataa as $key => $value) {
-  echo $value. '<br/>';
-}
-
-// forを使って繰り返し変数dataを数える…と説明されているが、Countable（数えられる）または配列以外の型の値を指定した際に発生するエラーが発生する
-for($i = 0; $i < count($data); $i++){
+//foreachを使って、変数documentsから1個ずつ値(name, department, text)を取り出して変数documentに入れる
+foreach ($documents as $document) {
   // EOT＝エンドオブテキスト？
     print<<<EOT
     <div style="m10; p5; border; solid 1px black;">
-        <p>名前:{$data[$i]['name']}</p>
-        <p>所属:{$data[$i]['department']}</p>
+        <p>名前:{$document['name']}</p>
+        <p>所属:{$document['department']}</p>
         <p>
-
 EOT;
-// forのなかのfor。すでに変数iはあるので、変数kを用いる
-        for($k = 0; $k < count($data[$i]['text']); $k++){
+// 以下をforeachを使って書き換える
+        for($k = 0; $k < count($document['text']); $k++){
             print<<<EOT
-            {$data[$i]['text'][$k]}<br>
+            {$document['text'][$k]}<br>
 EOT;
         }
         print<<<EOT
@@ -53,6 +41,5 @@ EOT;
 EOT;
 }
 
-// }
 
 ?>
