@@ -1,33 +1,41 @@
 <!-- //$は変数名の指定に使う -->
 <?php
+//メッセージ、エラーメッセージを表示する
 $message = '';
 $error = '';
 //ドルアンダーバーポスト
-//グローバル変数（なるべく使わないのが望ましい）
+//スーパーグローバル変数はなるべく使わないのが望ましい
+//変数がセットされているか、NULLではないかを確認するにはisset関数を用いる
 if(isset($_POST['submit']))
 {
+     //もし名前欄が空欄なら
      if(empty($_POST['name']))
      {
-          $error = "<p class='text-warning'>お名前が入力されていません</p>";
+          $error = "<p class='text-warning text-center display-5'>お名前が入力されていません</p>";
      }
+     //もしメールアドレス欄が空欄なら
      else if(empty($_POST['email']))
      {
-          $error = "<p class='text-warning'>メールアドレスが入力されていません</p>";
+          $error = "<p class='text-warning text-center display-5'>メールアドレスが入力されていません</p>";
      }
+     //もし希望するポジション欄が空欄なら
      else if(empty($_POST['position']))
      {
-          $error = "<p class='text-warning'>ご希望のポジションが入力されていません</p>";
+          $error = "<p class='text-warning text-center display-5'>ご希望のポジションが入力されていません</p>";
      }
      else
      {
+          //もしJSONファイルが存在していないならば（！を用いているので「反対」の意味になる）
           if(!file_exists('entries.json'))
           {
+               //touch関数を用いてJSONファイルをつくる
                touch('entries.json');
           }
 
           $current_data = file_get_contents('entries.json'); //ファイルの全内容を文字列に読み込む
           $array_data = json_decode($current_data, true); //json_decodeでJSON文字列をデコード(復号)する
-          //連想配列               
+          //連想配列
+          //$_POSTはスーパーグローバル変数（定義済み関数）で、HTTP POSTメソッドで送信された値を取得する       
           $extra = array(
                'name' => $_POST['name'],
                'email' => $_POST['email'],
@@ -38,9 +46,10 @@ if(isset($_POST['submit']))
           );
           $array_data[] = $extra;
           $final_data[] = json_encode($array_data);
-          if(file_put_contents('entries.json', $final_data)) //データをファイルに書き込む
+          //データをファイルに書き込む
+          if(file_put_contents('entries.json', $final_data)) 
           {
-               $message = '<p class="text-success">エントリー完了!お疲れ様でした。担当者がご連絡します</p>';
+               $message = '<p class="text-center text-success display-4">エントリー完了!お疲れ様でした。担当者がご連絡します。</p>';
           }
      }
 }
