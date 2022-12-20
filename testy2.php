@@ -42,7 +42,7 @@
            }
            else
            {
-                $error = 'JSONファイルが存在しません';
+                $error = 'JSONファイルが存在しません'; //file_put_contents が false を返した時にエラーメッセージを表示するようにする。
            }
       }
  }
@@ -59,9 +59,9 @@
          <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
  </head>
  <body>
-   <div class='container'>
-     <h3 class='text-center'>Shimoningにエントリーするしない？</h3>
-     <h5 class='text-center'><span class='text-danger'>※</span> は必須</h5>
+   <div class="container">
+     <h3 class="text-center">Shimoningにエントリーするしない？</h3>
+     <h5 class="text-center"><span class='text-danger'>※</span> は必須</h5>
      <form method="post">
           <?php
           if(!empty($error)) //isset関数とは、引数に指定した変数に値が設定されている、かつ、NULLではない場合にはtrue(正)の値を戻り値とします。 それ以外は、戻り値にfalse(偽)の値を返します。
@@ -69,21 +69,21 @@
                echo $error;
           }
           ?>
-          <label class='p-3'>お名前<span class='text-danger'> ※</span></label>
-          <input type='text' name='name'  placeholder='田中太郎' class='form-control' />
-          <label class='p-3'>メールアドレス<span class='text-danger'> ※</span></label>
-          <input type='text' name='email'  placeholder='shimoning@gmail.com' class='form-control' />
-          <label class='p-3'>性別</label>
-          <input type='text' name='gender' placeholder='男性' class='form-control' />
-          <label class='p-3'>ご希望のポジション<span class='text-danger'> ※</span></label>
-          <input type='text' name='position'  placeholder='SE' class='form-control' />
-          <label class='p-3'>前職</label>
-          <input type='text' name='work' placeholder='保険の営業' class='form-control' />
-          <label class='p-3'>逆質問（事前にきいておきたいこと）</label>
+          <label class="p-3">お名前<span class="text-danger"> ※</span></label>
+          <input type="text" name="name"  placeholder="田中太郎" class="form-control" />
+          <label class="p-3">メールアドレス<span class="text-danger"> ※</span></label>
+          <input type="text" name="email"  placeholder="shimoning@gmail.com" class="form-control" />
+          <label class="p-3">性別</label>
+          <input type="text" name="gender" placeholder="男性" class="form-control" />
+          <label class="p-3">ご希望のポジション<span class='text-danger'> ※</span></label>
+          <input type="text" name="position"  placeholder="SE" class="form-control" />
+          <label class="p-3">前職</label>
+          <input type="text" name="work" placeholder="保険の営業" class="form-control" />
+          <label class="p-3">逆質問（事前にきいておきたいこと）</label>
           <!-- デザインを整えるために<br>を使うのは本当は良くない -->
           <br>
-          <textarea class='container' name='question' cols='50' rows='5' placeholder='Shimoningの名前の由来は？'></textarea>
-          <input type='submit' name='submit' value='エントリーする' class='btn btn-success b-3' />
+          <textarea class="container" name="question" cols="50" rows="5" placeholder="Shimoningの名前の由来は？"></textarea>
+          <input type="submit" name="submit" value="エントリーする" class="btn btn-success b-3" />
           <?php
           if(!empty($message))
           {
