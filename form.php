@@ -3,7 +3,7 @@
 //メッセージ、エラーメッセージを表示する
 $message = '';
 $error = '';
-//ドルアンダーバーポスト
+//読み方は「ドルアンダーバーポスト」
 //スーパーグローバル変数はなるべく使わないのが望ましい
 //変数がセットされているか、NULLではないかを確認するにはisset関数を用いる
 if(isset($_POST['submit']))
@@ -25,15 +25,17 @@ if(isset($_POST['submit']))
      }
      else
      {
-          //もしJSONファイルが存在していないならば（！を用いているので「反対」の意味になる）
+          //もしJSONファイルが存在していないならば（<！>を用いているので反対の意味になる）
           if(!file_exists('entries.json'))
           {
                //touch関数を用いてJSONファイルをつくる
                touch('entries.json');
           }
 
-          $current_data = file_get_contents('entries.json'); //ファイルの全内容を文字列に読み込む
-          $array_data = json_decode($current_data, true); //json_decodeでJSON文字列をデコード(復号)する
+          //ファイルの全内容を文字列に読み込む
+          $current_data = file_get_contents('entries.json');
+          //json_decodeでJSON文字列をデコード(復号)する
+          $array_data = json_decode($current_data, true); 
           //連想配列
           //$_POSTはスーパーグローバル変数（定義済み関数）で、HTTP POSTメソッドで送信された値を取得する       
           $extra = array(
@@ -67,7 +69,7 @@ if(isset($_POST['submit']))
 </head>
 <body>
      <div class="container">
-          <h3 class="text-center">Shimoningにエントリーするしない？</h3>
+          <h3 class="text-center">Shimoningにエントリーする</h3>
           <h5 class="text-center"><span class='text-danger'>※</span> は必須</h5>
           <form method="post">
                <?php
@@ -86,9 +88,7 @@ if(isset($_POST['submit']))
                <input type="text" name="position"  placeholder="SE" class="form-control" />
                <label class="p-3">前職</label>
                <input type="text" name="work" placeholder="保険の営業" class="form-control" />
-               <label class="p-3">逆質問（事前にきいておきたいこと）</label>
-               <!-- デザインを整えるために<br>を使うのは本当は良くない -->
-               <br>
+               <label class="p-3">事前にきいておきたいこと</label>
                <textarea class="container" name="question" cols="50" rows="5" placeholder="Shimoningの名前の由来は？"></textarea>
                <input type="submit" name="submit" value="エントリーする" class="btn btn-success b-3" />
                <?php
@@ -98,6 +98,43 @@ if(isset($_POST['submit']))
                }
                ?>
           </form>
+     </div>
+
+     //テーブルをつくって見やすく表示する
+     <div class="container" style="width: 555px;">
+     <div class="table-container">
+     <?php
+		if(isset($message))
+		{
+			echo $message;
+		?>
+     <table id="tbstyle">
+          <tbody>
+               <tr>
+                    <th>名前</th>
+                    <th>メールアドレス</th>
+                    <th>性別</th>
+                    <th>希望ポジション</th>
+                    <th>前職</th>
+                    <th>事前質問</th>
+               </tr>
+               <?php foreach ($entries as $entry) { ?>
+               <tr>
+                    <td> <?= $entry->name; ?> </td>
+                    <td> <?= $entry->email; ?> </td>
+                    <td> <?= $entry->gender; ?> </td>
+                    <td> <?= $entry->position; ?> </td>
+                    <td> <?= $entry->work; ?> </td>
+                    <td> <?= $entry->question; ?> </td>
+               </tr>
+               <?php }
+          }
+          else
+               echo $message;
+          ?>
+          </tbody>
+     </table> 
+     </div>
      </div>
 </body>
 <footer class='text-center'>(c) shimoning.com</footer>
