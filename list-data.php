@@ -29,9 +29,9 @@ foreach ($documents as $document) {
         <p>
 EOT;
 // 以下をforeachを使って書き換える
-        for($k = 0; $k < count($document['text']); $k++){
+        foreach($document['text'] as $line){
             print<<<EOT
-            {$document['text'][$k]}<br>
+            {$line}<br>
 EOT;
         }
         print<<<EOT
