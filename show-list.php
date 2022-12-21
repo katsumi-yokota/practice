@@ -1,7 +1,7 @@
 <?php
 // 変数fileをつくる
-$file = './entries1.json';
-if(!file_exists('$file'))
+$file = './entries.json';
+if(!file_exists("$file"))
 {
   echo 'ファイルがありません！';
   return;
@@ -45,6 +45,6 @@ foreach ($entries as $entry)
   <p>希望ポジション:{$entry['position']}</p>
   <p>前職:{$entry['work']}</p>
   <p>質問:{$entry['question']}</p>
-  EOT;
+EOT;
 }
 ?>
