@@ -1,6 +1,11 @@
 <?php
 // 変数fileをつくる
-$file = './entries.json';
+$file = './entries1.json';
+if(!file_exists('$file'))
+{
+  echo 'ファイルがありません！';
+  return;
+}
 // 変数fileの内容を文字列に取り込む
 $json = file_get_contents($file);
 
