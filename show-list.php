@@ -74,7 +74,7 @@ if(empty($entries))
       <td><?php echo $entry['gender']; ?></td>
       <td><?php echo $entry['position']; ?></td>
       <td><?php echo $entry['work']; ?></td>
-      <td><?php echo $entry['question']; ?></td>
+      <td><?php echo nl2br ($entry['question']); ?></td>
     </tr>
   <!-- HTMLの中にPHPを書く時に{}があるとどのブロックを閉じるのかがわかりにくいため、endforceが好んで用いられる -->
   <?php endforeach; ?>
