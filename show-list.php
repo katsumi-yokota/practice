@@ -33,18 +33,52 @@ if(empty($entries))
   echo'空です！';
   return;
 }
-
-// 変数entriesから、1個ずつ値（name, email, gender, position, work, question）を取り出す
-foreach ($entries as $entry) 
-{
-  // ヒアドキュメント。終端記号は必ず文の最初に書く
-  print<<<EOT
-  <p>名前:{$entry['name']}</p>
-  <p>メールアドレス:{$entry['email']}</p>
-  <p>性別:{$entry['gender']}</p>
-  <p>希望ポジション:{$entry['position']}</p>
-  <p>前職:{$entry['work']}</p>
-  <p>質問:{$entry['question']}</p>
-EOT;
-}
 ?>
+
+<!DOCTYPE html>
+<html>
+  <head>
+  <title>Bootstrapとforeachを活用してデータをテーブル化する</title> 
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>  
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" /> 
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  </head>
+
+  <body>
+  <table class="table container">
+  <!-- HTMLのコメントアウト、PHPのコメントアウトの違いに注意 -->
+  <!-- テーブルのヘッダー -->
+  <thead>
+    <tr>
+      <!-- scopeは書かなくてもよい -->
+      <!-- colはcolumn（カラム）のこと -->
+      <th scope="row">#</th>
+      <th scope="col">名前</th>
+      <th scope="col">メールアドレス</th>
+      <th scope="col">性別</th>
+      <th scope="col">希望ポジション</th>
+      <th scope="col">前職</th>
+      <th scope="col">質問</th>
+    </tr>
+  </thead>
+  <!-- テーブルのボディ -->
+<tbody>
+  <!-- 変数entriesから、1個ずつ値（name, email, gender, position, work, question）を取り出す -->
+  <?php foreach ($entries as $i => $entry): ?>
+    <tr>
+      <!-- 可読性を高めるためにも、さっさと計算させる（算数の計算における「足すや掛ける」のように、順番がある）ためにも、こういう場合には（）を使う -->
+      <th><?php echo ($i+1); ?></th>
+      <td><?php echo $entry['name']; ?></td>
+      <td><?php echo $entry['email']; ?></td>
+      <td><?php echo $entry['gender']; ?></td>
+      <td><?php echo $entry['position']; ?></td>
+      <td><?php echo $entry['work']; ?></td>
+      <td><?php echo $entry['question']; ?></td>
+    </tr>
+  <!-- HTMLの中にPHPを書く時に{}があるとどのブロックを閉じるのかがわかりにくいため、endforceが好んで用いられる -->
+  <?php endforeach; ?>
+  </tbody>
+  </table>
+  </body>
+</html>
