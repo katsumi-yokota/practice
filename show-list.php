@@ -74,6 +74,7 @@ if(empty($entries))
       <td><?php echo $entry['work']; ?></td>
       <!-- htmlcharactersを用いてHTMLで使われる文字コードを無効化して、単なる文字列として出力する -->
       <!-- .や,を用いると複数の値をechoできるが、文字コードを無効化できなかったので以下のコードに決定 -->
+      <!-- ENT_QUOTESを指定すると、特殊文字のうちシングルクォーテーションとダブルクォーテーションも変換対象に含めるようになる -->
       <td><?php echo nl2br(htmlspecialchars($entry['question'], ENT_QUOTES, 'UTF-8')); ?></td>
     </tr>
   <!-- HTMLの中にPHPを書く時に{}があるとどのブロックを閉じるのかがわかりにくいため、endforceが好んで用いられる -->
