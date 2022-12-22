@@ -65,13 +65,16 @@ if(empty($entries))
   <?php foreach ($entries as $i => $entry): ?>
     <tr>
       <!-- 可読性を高めるためにも、さっさと計算させる（算数の計算における「足すや掛ける」のように、順番がある）ためにも、こういう場合には（）を使う -->
+      <!-- 変数iはValue。デフォルトで0から始まるので１を足してあげればよい -->
       <th><?php echo ($i+1); ?></th>
       <td><?php echo $entry['name']; ?></td>
       <td><?php echo $entry['email']; ?></td>
       <td><?php echo $entry['gender']; ?></td>
       <td><?php echo $entry['position']; ?></td>
       <td><?php echo $entry['work']; ?></td>
-      <td><?php echo nl2br ($entry['question']); ?></td>
+      <!-- htmlcharactersを用いてHTMLで使われる文字コードを無効化して、単なる文字列として出力する -->
+      <!-- .や,を用いると複数の値をechoできるが、文字コードを無効化できなかったので以下のコードに決定 -->
+      <td><?php echo nl2br(htmlspecialchars($entry['question'], ENT_QUOTES, 'UTF-8')); ?></td>
     </tr>
   <!-- HTMLの中にPHPを書く時に{}があるとどのブロックを閉じるのかがわかりにくいため、endforceが好んで用いられる -->
   <?php endforeach; ?>
