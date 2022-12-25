@@ -64,7 +64,8 @@ if(isset($_POST['submit']))
      <div class="container">
           <h3 class="text-center">[DB用]Shimoningにエントリーするしない？</h3>
           <h5 class="text-center"><span class='text-danger'>※</span> は必須</h5>
-          <form method="post">
+          <!-- action属性は、form要素の中の属性の1つで、フォームに入力された情報の送信先を指定する。今回はform-db.phpを指定 -->
+          <form method="post" action="form-db.php"> 
                <?php
                if(!empty($error)) //isset関数とは、引数に指定した変数に値が設定されている、かつ、NULLではない場合にはtrue(正)の値を戻り値とします。 それ以外は、戻り値にfalse(偽)の値を返します。
                {
@@ -104,70 +105,3 @@ if(isset($_POST['submit']))
 </body>
 <footer class='text-center'>(c) shimoning.com</footer>
 </html>
-
-<?php
-// DSN（データソースネーム）
-// utf8:1～3バイトまで対応 utf8mb4:1～4バイトまで対応
-// $dsn = 'mysql:host=localhost;dbname=form-db;charaset=utf8';
-// // ユーザー名。初期設定はrootユーザー（全権限を持つ）が用意されているが、権限を何人かのユーザーに分けるケースが多い
-// $user = 'yamadasan';
-// // パスワード
-// $pass ='1q2w3e4r5t';
-// // オプション...なくてもいい。今回はなし
-
-// try
-// {
-//   $pdo = new PDO
-//   (
-//     $dsn, $user, $pass,
-//     [ 
-//       PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-//       PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-//       PDO::ATTR_EMULATE_PREPARES => false,
-//     ]
-//   );
-
-//   $pdo->query
-//   (
-//     'DROP TABLE IF EXISTS entries'
-//   );
-
-//   $pdo->query
-//   (
-//     'CREATE TABLE entries
-//     (
-//       id INT NOT NULL AUTO_INCREMENT,
-//       name text,
-//       email text,
-//       gender text,
-//       position text,
-//       work text,
-//       question text,
-//       PRIMARY KEY (id)
-//     )'
-//   );
-
-//   $pdo->query
-//   (
-//     "INSERT INTO entries (name, email, gender, position, work, question) VALUES
-//       ('Thanks', 15),
-//       ('thanks', 4),
-//       ('bo', 9),
-//       ('boi', 19),
-//       ('boiu', 12),
-//       ('boiup', 17),
-//       ('あ', 17),
-//       ('Arigato', 15)"
-//   );
-
-//   $stmt = $pdo->query('SHOW TABLES');
-//   $entries = $stmt->fetchAll();
-
-// } 
-// catch (PDOException $e)
-// {
-//   echo $e->getMessage();
-//   exit;
-// }   -->
-
-?>
