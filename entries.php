@@ -1,10 +1,18 @@
 <!-- test-paging.phpのコピー -->
 <?php
-define('ENTRIES_PER_PAGE', 5); // 1ページごとに5つのエントリーを表示
+$enrtries_per_page = 5; // 1ページごとに5つのエントリーを表示
+if(isset($_POST['number-list']))
+{
+  $enrtries_per_page = (int)$_POST['number-list'];
+}
+if ($enrtries_per_page <= 0)
+{
+  $enrtries_per_page = 5;
+}
 $pdo = new PDO('mysql:dbname=form-db;host=localhost;charset=utf8', 'yamadasan', '1q2w3e4r5t');
 
 $total = $pdo->query('SELECT COUNT(*) FROM entries')->fetchColumn();// 該当するデータが何件あるのか（＝総数）を計算する // fetchColumnで特定のカラムを一行ずつ読む込むことができる
-$totalPages = ceil($total / ENTRIES_PER_PAGE); // ceil（天井）関数で切り上げ（floor（床）関数やround（円）関数は例えば#6を1ページ目としてしまうので不適切）
+$totalPages = ceil($total / $enrtries_per_page); // ceil（天井）関数で切り上げ（floor（床）関数やround（円）関数は例えば#6を1ページ目としてしまうので不適切）
 
 // 存在するページが入力された場合はそのページに飛ばし、そうでなければ1ページ目に吹き飛ばす
 if 
@@ -20,13 +28,13 @@ else
   $page = 1; // 1ページ目に吹き飛ばす
 }
 
-$offset = ENTRIES_PER_PAGE * ($page -1); // offsetとはある一文字の位置のこと
-// $sql = 'SELECT * FROM entries limit '.$offset.','.ENTRIES_PER_PAGE; // limitで、SELECT文で取得するデータ数（行数）を指定することができる
+$offset = $enrtries_per_page * ($page -1); // offsetとはある一文字の位置のこと
+// $sql = 'SELECT * FROM entries limit '.$offset.','.$enrtries_per_page; // limitで、SELECT文で取得するデータ数（行数）を指定することができる
 $sql = 'SELECT * FROM entries LIMIT :offset, :limit';
 $stmt = $pdo->prepare($sql); // prepareメソッドを使って
 
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-$stmt->bindValue(':limit', ENTRIES_PER_PAGE, PDO::PARAM_INT);
+$stmt->bindValue(':limit', $enrtries_per_page, PDO::PARAM_INT);
 $stmt->execute();
 
 $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -55,6 +63,7 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <th class="bg-info">前職</th>
     <th class="bg-info">質問</th>
   </tr>
+
 <!-- // foreachで配列の中身を一行ずつ出力 -->
 <?php foreach ($entries as $entry): ?>
   <tr>
@@ -83,6 +92,19 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <!-- 次のページに進む -->
     <?php endif; ?>
   </ul>
-  </nav>
+</nav>
+
+<form method="POST" action="">
+  <label for="表示件数">表示件数:</label>
+  <select name="number-list" type="number" id="表示件数">
+    <option value="5" <?php if ($enrtries_per_page === 5) : ?>selected<?php endif; ?>>5件</option>
+    <option value="10" <?php if ($enrtries_per_page === 10) : ?>selected<?php endif; ?>>10件</option>
+    <option value="15" <?php if ($enrtries_per_page === 15) : ?>selected<?php endif; ?>>15件</option>
+    <option value="20" <?php if ($enrtries_per_page === 20) : ?>selected<?php endif; ?>>20件</option>
+  </select>
+  <input type="submit" name="submit" value="変更する" class="btn-info px-1" />
+
+</form>
+
 </body>
 </html>
