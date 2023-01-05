@@ -69,30 +69,20 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <?php endforeach; ?>
 </table>
 
-<!-- ページネーションの実装 -->
-<?php if($page > 1) : ?> <!-- もし変数pageが1より大きければ -->
-<!-- ページネーションのUI、UXを改善しよう -->
-<!-- <div class="d-flex align-items-center"> -->
-<a href="?page=<?php echo $page-1; ?>">PREV</a> <!-- $page-1で前のページに戻る -->
-<?php endif; ?> <!-- endifでif文の終わりを明示 -->
-<?php for ($i =1; $i <= $totalPages; $i++) : ?>
-<a href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
-<?php endfor; ?>
-<?php if($page < 4) : ?> <!-- もし変数pageが4より小さければ -->
-<a href="?page=<?php echo $page+1; ?>">NEXT</a> <!-- $page＋1で次のページに進む -->
-</div>
-<?php endif; ?>
 <!-- Bootstrapでページネーションを実装 -->
-<!-- <nav aria-label="Page navigation test">
-  <ul class="pagination pagination-lg my-4 justify-content-center">
-    disabledでリンクを無効化
-    <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-    activeでページネーションをアクティブに
-    <li class="page-item active"><a class="page-link" href="#">1</a></li>
-    <li class="page-item"><a class="page-link" href="#">2</a></li>
-    <li class="page-item"><a class="page-link" href="#">3</a></li>
-    <li class="page-item"><a class="page-link" href="#">Next</a></li>
+<nav aria-label="Pagination" class="my-5">
+  <ul class="pagination pagination-lg justify-content-center">
+    <?php if($page > 1) : ?>
+    <li class="page-item"><a class="page-link" href="?page=<?php echo $page - 1; ?>">前へ</a></li> <!-- 前のページに戻る -->
+    <?php endif; ?>
+    <?php for ($i = 1; $i <= $totalPages; $i++) : ?>
+    <li class="page-item"><a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a></li>
+    <?php endfor; ?>
+    <?php if($page < $totalPages) : ?>
+    <li class="page-item"><a class="page-link" href="?page=<?php echo $page + 1; ?>">次へ</a></li>
+    <!-- 次のページに進む -->
+    <?php endif; ?>
   </ul>
-  </nav> -->
+  </nav>
 </body>
 </html>
