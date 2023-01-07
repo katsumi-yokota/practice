@@ -1,43 +1,42 @@
 <?php
-// phpinfo();
 // エントリーをデフォルトで５件、指定された場合は１０件、１５件、２０件表示
-$enrtries_per_page = 5; // デフォルトで、1ページごとに５件表示
-if(isset($_GET['number-list'])) // フォームのnumber-listを取得して、isset関数で値が設定されているのか、かつ、NULLではないかを確認
+$enrtries_per_page = 5;
+if(isset($_GET['entries-shown']))
 {
-  $enrtries_per_page = (int)$_GET['number-list']; // 念のため整数にキャスト
+  $enrtries_per_page = (int)$_GET['entries-shown'];
 }
 
-var_dump($enrtries_per_page); // 確認 // 現在は前へや次へ、あるいは数値であらわされるリンクをクリックするとデフォルトの値を受け取っている
+var_dump($enrtries_per_page);
 
-// 通常はあり得ないが、0以下の場合は5件表示
+// 0以下の場合は5件表示
 if ($enrtries_per_page <= 0)
 {
   $enrtries_per_page = 5;
 }
 
-$pdo = new PDO('mysql:dbname=form-db;host=localhost;charset=utf8', 'yamadasan', '1q2w3e4r5t'); // 0. PDOでデータベースに「接続」
+$pdo = new PDO('mysql:dbname=form-db;host=localhost;charset=utf8', 'yamadasan', '1q2w3e4r5t'); 
 
-$total = $pdo->query('SELECT COUNT(*) FROM entries')->fetchColumn();// 該当するデータが何件あるのか（＝総数）を計算する // fetchColumnで特定のカラムを一行ずつ読む込むことができる
-$totalPages = ceil($total / $enrtries_per_page); // ceil（天井）関数で切り上げ（floor（床）関数やround（円）関数は例えば#6を1ページ目としてしまうので不適切）
+$total = $pdo->query('SELECT COUNT(*) FROM entries')->fetchColumn();
+$totalPages = ceil($total / $enrtries_per_page); 
 
 // 存在するページが入力された場合はそのページに飛ばし、そうでなければ1ページ目に飛ばす
 if 
 (
-  preg_match('/^[1-9][0-9]*$/', $_GET['page']) and // 正規表現でマッチング // [0-9] は0~9、[1-9]は1‐9のいずれかに一文字にマッチ。*は繰り返しの意
-  $_GET['page'] <= $totalPages // トータルのページ数以下なら
+  preg_match('/^[1-9][0-9]*$/', $_GET['page']) and
+  $_GET['page'] <= $totalPages
 ) 
 {
-  $page = (int)$_GET['page']; // 整数にキャスト
+  $page = (int)$_GET['page'];
 }
 else
 {
-  $page = 1; // 1ページ目に吹き飛ばす
+  $page = 1;
 }
 var_dump($page);
 
-$offset = $enrtries_per_page * ($page - 1); // offsetとはある一文字の位置のこと
+$offset = $enrtries_per_page * ($page - 1);
 var_dump($offset);
-$sql = 'SELECT * FROM entries LIMIT :offset, :limit'; // LIMIT句を使って取得するデータ数を指定 // :（コロン）で配列から一部分を取り出す
+$sql = 'SELECT * FROM entries LIMIT :offset, :limit';
 
 // 1. 準備、2. 紐付け、 3. 実行、 4. 取得
 $stmt = $pdo->prepare($sql); // 1. prepareメソッドを使ってSQL文を実行する「準備」
@@ -45,7 +44,6 @@ $stmt->bindValue(':offset', $offset, PDO::PARAM_INT); // 2. bindValueメソッ�
 $stmt->bindValue(':limit', $enrtries_per_page, PDO::PARAM_INT);
 $stmt->execute(); // 3. executeメソッドを使って「実行」
 $entries = $stmt->fetchAll(PDO::FETCH_ASSOC); // 4. fetch(fetchAll)メソッドでデータを「取得」
-// var_dump($entries);
 ?>
 
 <!DOCTYPE php>
@@ -60,7 +58,6 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC); // 4. fetch(fetchAll)メソッド�
 <body>
 
 <h1 class="text-center">エントリー一覧</h1>
-<!-- table-borderedで罫線を引き、table-stripedで交互に配色 -->
 <table class="table table-bordered table-striped">
   <tr>
     <th class="bg-info">#</th>
@@ -90,21 +87,21 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC); // 4. fetch(fetchAll)メソッド�
 <nav aria-label="Pagination" class="my-5">
   <ul class="pagination pagination-lg justify-content-center">
     <?php if($page > 1) : ?>
-    <li class="page-item"><a class="page-link" href="?page=<?php echo $page - 1; ?>">前へ</a></li> <!-- 前のページに戻る -->
+    <!-- クエリパラメータを変更して表示件数を変えても移動時に正常に動作させる -->
+    <li class="page-item"><a class="page-link" href="?entries-shown=<?php echo $enrtries_per_page; ?>&page=<?php echo $page - 1; ?>&submit=<?php echo '変更する'; ?>">前へ</a></li>
     <?php endif; ?>
     <?php for ($i = 1; $i <= $totalPages; $i++) : ?>
-    <li class="page-item"><a class="page-link" href="?page=<?php echo $page; ?>"><?php echo $i; ?></a></li> // 実際に打ち込みながら試してみる
+    <li class="page-item"><a class="page-link" href="?entries-shown=<?php echo $enrtries_per_page; ?>&page=<?php echo $i; ?>&submit=<?php echo '変更する'; ?>"><?php echo $i; ?></a></li> 
     <?php endfor; ?>
     <?php if($page < $totalPages) : ?>
-    <li class="page-item"><a class="page-link" href="?page=<?php echo $page + 1; ?>">次へ</a></li>
-    <!-- 次のページに進む -->
+    <li class="page-item"><a class="page-link" href="?entries-shown=<?php echo $enrtries_per_page; ?>&page=<?php echo $page + 1; ?>&submit=<?php echo '変更する'; ?>">次へ</a></li>
     <?php endif; ?>
   </ul>
 </nav>
 
 <form method="GET" action="">
   <label for="表示件数">表示件数:</label>
-  <select name="number-list" id="表示件数"> // name="number-list"を変える
+  <select name="entries-shown" id="表示件数">
     <!-- selectedを使って指定した件数を固定 -->
     <option value="5" <?php if ($enrtries_per_page === 5) : ?>selected<?php endif; ?>>5件</option>
     <option value="10" <?php if ($enrtries_per_page === 10) : ?>selected<?php endif; ?>>10件</option>
