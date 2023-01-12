@@ -1,49 +1,51 @@
 <?php
-// エントリーをデフォルトで５件、指定された場合は１０件、１５件、２０件表示
-$enrtries_per_page = 5;
-if(isset($_GET['entries-shown']))
-{
-  $enrtries_per_page = (int)$_GET['entries-shown'];
-}
-
-var_dump($enrtries_per_page);
-
-// 0以下の場合は5件表示
-if ($enrtries_per_page <= 0)
-{
-  $enrtries_per_page = 5;
-}
-
 $pdo = new PDO('mysql:dbname=form-db;host=localhost;charset=utf8', 'yamadasan', '1q2w3e4r5t'); 
 
-$total = $pdo->query('SELECT COUNT(*) FROM entries')->fetchColumn();
-$totalPages = ceil($total / $enrtries_per_page); 
+// エントリーをデフォルトで５件、指定された場合は１０件、１５件、２０件表示
+$perPage = 5; // 1ページに何件エントリーを表示させるか、のデフォルト
+if(isset($_GET['limit']))
+{
+  $perPage = (int)$_GET['limit'];
+}
 
-// 存在するページが入力された場合はそのページに飛ばし、そうでなければ1ページ目に飛ばす
-if 
-(
-  preg_match('/^[1-9][0-9]*$/', $_GET['page']) and
-  $_GET['page'] <= $totalPages
-) 
+// 0以下の場合は5件表示
+if ($perPage <= 0)
+{
+  $perPage = 5;
+}
+
+$total = $pdo->query('SELECT COUNT(*) FROM entries')->fetchColumn();
+$totalPages = ceil($total / $perPage); 
+
+// 存在するページが入力された場合はそのページに飛ばし、そうでなければ1ページ目に飛ばす。三項演算子を使うことも可能
+$page = 1; // 表示させるページのデフォルト
+if(isset($_GET['page']) && preg_match('/^[1-9][0-9]*$/', $_GET['page']) && $_GET['page'] <= $totalPages) 
 {
   $page = (int)$_GET['page'];
 }
-else
+
+
+$sort = 'asc'; // 昇順降順のデフォルト。変な値を入れたときでも正常に見える
+if(isset($_GET['direction']) && $_GET['direction'] === 'desc')
 {
-  $page = 1;
+  $sort = 'desc';
 }
-var_dump($page);
 
-$offset = $enrtries_per_page * ($page - 1);
-var_dump($offset);
-$sql = 'SELECT * FROM entries LIMIT :offset, :limit';
+// ソート可能なカラムのnameの配列をつくりin_arrayで配列にnameがあるかチェックしてある場合はそのnameを変数sortColumnに格納
+$sortableColumns = ['id', 'name', 'email', 'gender', 'position', 'work', 'question'];
+$sortColumn = 'id'; // 安全のために初期化
+if(in_array($_GET['sort-column'], $sortableColumns, true)) // 第三引数はtrueにして厳密に比較
+{
+  $sortColumn = $_GET['sort-column'];
+}
 
-// 1. 準備、2. 紐付け、 3. 実行、 4. 取得
-$stmt = $pdo->prepare($sql); // 1. prepareメソッドを使ってSQL文を実行する「準備」
-$stmt->bindValue(':offset', $offset, PDO::PARAM_INT); // 2. bindValueメソッドを使ってプレースホルダに値を「紐付け」
-$stmt->bindValue(':limit', $enrtries_per_page, PDO::PARAM_INT);
-$stmt->execute(); // 3. executeメソッドを使って「実行」
-$entries = $stmt->fetchAll(PDO::FETCH_ASSOC); // 4. fetch(fetchAll)メソッドでデータを「取得」
+$offset = $perPage * ($page - 1);
+$sql = 'SELECT * FROM entries ORDER BY '.$sortColumn.' '.$sort.' LIMIT :offset, :limit'; // '.$sort.'で変数sortをSQL文にねじ込む
+$stmt = $pdo->prepare($sql);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+$stmt->execute();
+$entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE php>
@@ -60,6 +62,9 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC); // 4. fetch(fetchAll)メソッド�
 <h1 class="text-center">エントリー一覧</h1>
 <table class="table table-bordered table-striped">
   <tr>
+    <!-- <th>#
+      <button type="submit" form="名前の並び替え">並び替え</button>
+    </th> -->
     <th class="bg-info">#</th>
     <th class="bg-info">名前</th>
     <th class="bg-info">メールアドレス</th>
@@ -69,7 +74,6 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC); // 4. fetch(fetchAll)メソッド�
     <th class="bg-info">質問</th>
   </tr>
 
-<!-- // foreachで配列の中身を一行ずつ出力 -->
 <?php foreach ($entries as $entry): ?>
   <tr>
     <td><?php echo $entry['id']; ?></td>
@@ -81,37 +85,64 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC); // 4. fetch(fetchAll)メソッド�
     <td><?php echo htmlspecialchars($entry['question'], ENT_QUOTES, 'UTF-8'); ?></td>
   </tr>
 <?php endforeach; ?>
+
 </table>
 
-<!-- Bootstrapでページネーションを実装 -->
 <nav aria-label="Pagination" class="my-5">
   <ul class="pagination pagination-lg justify-content-center">
     <?php if($page > 1) : ?>
-    <!-- クエリパラメータを変更して表示件数を変えても移動時に正常に動作させる -->
-    <li class="page-item"><a class="page-link" href="?entries-shown=<?php echo $enrtries_per_page; ?>&page=<?php echo $page - 1; ?>&submit=<?php echo '変更する'; ?>">前へ</a></li>
+    <!-- クエリパラメータを変更して表示件数や昇順降順を変えても遷移時、遷移後に正常に動作させる -->
+    <li class="page-item"><a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $page - 1; ?>&direction=<?php echo $sort; ?>">前へ</a></li>
     <?php endif; ?>
     <?php for ($i = 1; $i <= $totalPages; $i++) : ?>
-    <li class="page-item"><a class="page-link" href="?entries-shown=<?php echo $enrtries_per_page; ?>&page=<?php echo $i; ?>&submit=<?php echo '変更する'; ?>"><?php echo $i; ?></a></li> 
+    <li class="page-item"><a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $i; ?>&direction=<?php echo $sort; ?>"><?php echo $i; ?></a></li> 
     <?php endfor; ?>
     <?php if($page < $totalPages) : ?>
-    <li class="page-item"><a class="page-link" href="?entries-shown=<?php echo $enrtries_per_page; ?>&page=<?php echo $page + 1; ?>&submit=<?php echo '変更する'; ?>">次へ</a></li>
+    <li class="page-item"><a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $page + 1; ?>&direction=<?php echo $sort; ?>">次へ</a></li>
     <?php endif; ?>
   </ul>
 </nav>
 
-<form method="GET" action="">
-  <label for="表示件数">表示件数:</label>
-  <select name="entries-shown" id="表示件数">
-    <!-- selectedを使って指定した件数を固定 -->
-    <option value="5" <?php if ($enrtries_per_page === 5) : ?>selected<?php endif; ?>>5件</option>
-    <option value="10" <?php if ($enrtries_per_page === 10) : ?>selected<?php endif; ?>>10件</option>
-    <option value="15" <?php if ($enrtries_per_page === 15) : ?>selected<?php endif; ?>>15件</option>
-    <option value="20" <?php if ($enrtries_per_page === 20) : ?>selected<?php endif; ?>>20件</option>
-  </select>
-  <input type="hidden" name="page" value="<?php 'page'; echo $page; ?>">
-  <input type="submit" name="submit" value="変更する" class="btn-info px-1" />
+<form action="" method="GET">
+<!-- divタグでくくって「ひとつブロック」とする。form内でdivタグを使うことは可能。なおdivとはdivision（分割）の意 -->
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-2 mb-2">
+        <label for="表示件数" class="form-label">表示件数:</label>
+        <select class="form-select" name="limit" id="表示件数">
+          <!-- selectedを使って指定した件数を固定 -->
+          <option value="5" <?php if ($perPage === 5) : ?>selected<?php endif; ?>>5件</option>
+          <option value="10" <?php if ($perPage === 10) : ?>selected<?php endif; ?>>10件</option>
+          <option value="15" <?php if ($perPage === 15) : ?>selected<?php endif; ?>>15件</option>
+          <option value="20" <?php if ($perPage === 20) : ?>selected<?php endif; ?>>20件</option>
+        </select>
+      </div>
+    </div>
+    <input type="hidden" name="page" value="<?php echo $page; ?>"> 
 
+      <!-- 昇順降順のソート(並び替え)に関する情報をインプットする -->
+    <div class="row justify-content-center">
+      <div class="col-lg-2 mb-1">
+        <label for="昇順降順" class="form-label">昇順降順:</label>
+        <select class="form-select" name="sort-column" id="昇順降順">
+          <option value="id" selected>id</option>
+          <option value="name" selected>名前</option>
+          <option value="email" selected>メールアドレス</option>
+          <option value="gender" selected>性別</option>
+          <option value="position" selected>希望のポジション</option>
+          <option value="work" selected>前職</option>
+          <option value="question" selected>質問</option>
+        <input type="radio" class="form-check-input" name="direction" value="asc" <?php if(isset($sort) && $sort === 'asc') {echo 'checked';}?>>昇順
+        <input type="radio" class="form-check-input" name="direction" value="desc" <?php if(isset($sort) && $sort === 'desc') {echo 'checked';}?>>降順
+      </div>
+    </div>
+      
+    <div class="row justify-content-center">
+      <div class="col-lg-2 text-center">
+        <input class="form-control btn-info" type="submit">
+      </div>
+    </div>
+  </div>
 </form>
-
 </body>
 </html>
