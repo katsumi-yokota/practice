@@ -23,7 +23,6 @@ if(isset($_GET['page']) && preg_match('/^[1-9][0-9]*$/', $_GET['page']) && $_GET
 {
   $page = (int)$_GET['page'];
 }
-var_dump($page);
 
 $direction = 'asc'; // 初期化
 if(isset($_GET['direction']) && $_GET['direction'] === 'desc')
@@ -49,158 +48,160 @@ $stmt->execute();
 $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
-<!DOCTYPE php>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="test-paging-style.css">
-  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
   <title>エントリー一覧</title>
 </head>
 
   <body>
     <header>
-    <h1 class="text-center">エントリー一覧</h1>
-    <table class="table table-bordered table-striped">
+      <h1 class="text-center">エントリー一覧</h1>
+    </header>
+
+    <table class="table table-bordered table-striped table-hover">
       <thead>
-        <tr class="bg-info">
-          <th>
-            <!-- 各カラムを「ワンクリック目は昇順にソート」するコードを追加する -->
-            <?php if ($sortColumn !== 'id'): ?> <!-- ワンクリック目はidを昇順にソート -->
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=id&direction=asc">
-            id
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'id' && $direction === 'desc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=id&direction=asc">
-            id <?php if ($sortColumn === 'id' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'id' && $direction === 'asc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=id&direction=desc">
-            id <?php if ($sortColumn === 'id' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-          </th>
-          <th>
-            <?php if ($sortColumn !== 'name'): ?> <!-- ワンクリック目はnameを昇順にソート -->
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=name&direction=asc">
-            名前
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'name' && $direction === 'desc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=name&direction=asc">
-            名前 <?php if ($sortColumn === 'name' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'name' && $direction === 'asc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=name&direction=desc">
-            名前 <?php if ($sortColumn === 'name' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-          </th>
-          <th>
-            <?php if ($sortColumn !== 'email'): ?> <!-- ワンクリック目はemailを昇順にソート -->
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=email&direction=asc">
-            メールアドレス
-            </a>
-            <?php endif; ?> 
-            <?php if ($sortColumn === 'email' && $direction === 'desc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=email&direction=asc">
-            メールアドレス <?php if ($sortColumn === 'email' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'email' && $direction === 'asc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>$page=<?php echo $page; ?>&sort-column=email&direction=desc">
-            メールアドレス <?php if ($sortColumn == 'email' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-          </th>
-          <th>
-            <?php if ($sortColumn !== 'gender'): ?> <!-- ワンクリック目はgenderを昇順にソート -->
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=gender&direction=asc">
-            性別
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'gender' && $direction === 'desc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=gender&direction=asc">
-            性別 <?php if ($sortColumn === 'gender' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'gender' && $direction === 'asc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=gender&direction=desc">
-            性別 <?php if ($sortColumn === 'gender' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-          </th>
-          <th>
-            <?php if ($sortColumn !== 'position'): ?> <!-- ワンクリック目はpositionを昇順にソート -->
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=position&direction=asc">
-            希望のポジション
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'position' && $direction === 'desc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=position&direction=asc">
-            希望のポジション <?php if ($sortColumn === 'position' && $direction === 'desc'): {echo '↑';}?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'position' && $direction === 'asc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=position&direction=desc">
-            希望のポジション <?php if ($sortColumn === 'position' && $direction === 'asc'): {echo '↓';}?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-          </th>
-          <th>
-            <?php if ($sortColumn !== 'work'): ?> <!-- ワンクリック目はworkを昇順にソート -->
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=work&direction=asc">
-            前職
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'work' && $direction === 'desc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=work&direction=asc">
-            前職 <?php if ($sortColumn === 'work' && $direction === 'desc'): {echo '↑';}?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'work' && $direction === 'asc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=work&direction=desc">
-            前職 <?php if ($sortColumn === 'work' && $direction === 'asc'): {echo '↓';}?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-          </th>
-          <th>
-            <?php if ($sortColumn !== 'question'): ?> <!-- ワンクリック目はquestionを昇順にソート -->
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=question&direction=asc">
-            質問
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'question' && $direction === 'desc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=question&direction=asc">
-            質問 <?php if ($sortColumn === 'question' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-            <?php if ($sortColumn === 'question' && $direction ==='asc'): ?>
-            <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=question&direction=desc">
-            質問 <?php if ($sortColumn === 'question' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
-            </a>
-            <?php endif; ?>
-          </th>
-        </tr>
+          <tr>
+            <th>
+              <!-- 各カラムを「ワンクリック目は昇順にソート」するコードを追加する -->
+              <?php if ($sortColumn !== 'id'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=id&direction=asc">
+              id
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'id' && $direction === 'desc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=id&direction=asc">
+              id <?php if ($sortColumn === 'id' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'id' && $direction === 'asc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=id&direction=desc">
+              id <?php if ($sortColumn === 'id' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+            </th>
+            <th>
+              <?php if ($sortColumn !== 'name'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=name&direction=asc">
+              名前
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'name' && $direction === 'desc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=name&direction=asc">
+              名前 <?php if ($sortColumn === 'name' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'name' && $direction === 'asc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=name&direction=desc">
+              名前 <?php if ($sortColumn === 'name' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+            </th>
+            <th>
+              <?php if ($sortColumn !== 'email'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=email&direction=asc">
+              メールアドレス
+              </a>
+              <?php endif; ?> 
+              <?php if ($sortColumn === 'email' && $direction === 'desc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=email&direction=asc">
+              メールアドレス <?php if ($sortColumn === 'email' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'email' && $direction === 'asc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>$page=<?php echo $page; ?>&sort-column=email&direction=desc">
+              メールアドレス <?php if ($sortColumn == 'email' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+            </th>
+            <th>
+              <?php if ($sortColumn !== 'gender'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=gender&direction=asc">
+              性別
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'gender' && $direction === 'desc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=gender&direction=asc">
+              性別 <?php if ($sortColumn === 'gender' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'gender' && $direction === 'asc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=gender&direction=desc">
+              性別 <?php if ($sortColumn === 'gender' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+            </th>
+            <th>
+              <?php if ($sortColumn !== 'position'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=position&direction=asc">
+              希望のポジション
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'position' && $direction === 'desc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=position&direction=asc">
+              希望のポジション <?php if ($sortColumn === 'position' && $direction === 'desc'): {echo '↑';}?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'position' && $direction === 'asc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=position&direction=desc">
+              希望のポジション <?php if ($sortColumn === 'position' && $direction === 'asc'): {echo '↓';}?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+            </th>
+            <th>
+              <?php if ($sortColumn !== 'work'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=work&direction=asc">
+              前職
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'work' && $direction === 'desc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=work&direction=asc">
+              前職 <?php if ($sortColumn === 'work' && $direction === 'desc'): {echo '↑';}?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'work' && $direction === 'asc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=work&direction=desc">
+              前職 <?php if ($sortColumn === 'work' && $direction === 'asc'): {echo '↓';}?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+            </th>
+            <th>
+              <?php if ($sortColumn !== 'question'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=question&direction=asc">
+              質問
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'question' && $direction === 'desc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=question&direction=asc">
+              質問 <?php if ($sortColumn === 'question' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+              <?php if ($sortColumn === 'question' && $direction ==='asc'): ?>
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=question&direction=desc">
+              質問 <?php if ($sortColumn === 'question' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
+              </a>
+              <?php endif; ?>
+            </th>
+          </tr>
       </thead>
 
-      <?php foreach ($entries as $entry): ?>
       <tbody>
-        <tr>
-          <td><?php echo $entry['id']; ?></td>
-          <td><?php echo $entry['name']; ?></td>
-          <td><?php echo $entry['email']; ?></td>
-          <td><?php echo $entry['gender']; ?></td>
-          <td><?php echo $entry['position']; ?></td>
-          <td><?php echo $entry['work']; ?></td>
-          <td><?php echo htmlspecialchars($entry['question'], ENT_QUOTES, 'UTF-8'); ?></td>
-        </tr>
-      </tbody>
+      <?php foreach ($entries as $entry): ?>
+          <tr>
+            <td><?php echo $entry['id']; ?></td>
+            <td><?php echo $entry['name']; ?></td>
+            <td><?php echo $entry['email']; ?></td>
+            <td><?php echo $entry['gender']; ?></td>
+            <td><?php echo $entry['position']; ?></td>
+            <td><?php echo $entry['work']; ?></td>
+            <td><?php echo htmlspecialchars($entry['question'], ENT_QUOTES, 'UTF-8'); ?></td>
+          </tr>
       <?php endforeach; ?>
+      </tbody>
     </table>
 
       <nav aria-label="Page navigation" class="my-5">
@@ -213,7 +214,7 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
           <?php endif; ?>
           <?php for ($i = 1; $i <= $totalPages; $i++): ?>
           <li class="page-item <?php if ($page === $i) {echo 'disabled';} ?>"> <!-- 開いているページのみclass="disabled"にする -->
-            <a class="page-link <?php if ($page === $i) {echo 'bg-info';} ?>" href="?limit=<?php echo $perPage; ?>&page=<?php echo $i; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>">
+            <a class="page-link <?php if ($page === $i) {echo 'active';} ?>" href="?limit=<?php echo $perPage; ?>&page=<?php echo $i; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>">
             <?php echo $i; ?>
             </a>
           </li>
@@ -227,7 +228,7 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </ul>
       </nav>
 
-      <form action="" method="GET" id="昇順降順の切り替え">
+      <form action="" method="GET">
         <div class="container">
           <div class="row justify-content-center">
             <div class="col-lg-2 mb-2">
@@ -245,7 +246,7 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
           <!-- 昇順降順のソート -->
           <div hidden class="row justify-content-center">  <!-- hiddenでdiv内の要素を隠す -->
-            <div class="col-lg-2 mb-1">
+            <div class="col-lg-2 mb-2">
               <label for="昇順降順" class="form-label"></label>
               <select class="form-select" name="sort-column" id="昇順降順">
                 <option value="id" <?php if ($sortColumn === 'id'): ?>selected<?php endif; ?>>id</option>
@@ -275,6 +276,5 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         </div>
       </form>
-    </header>           
   </body>
 </html>
