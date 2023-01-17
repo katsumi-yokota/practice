@@ -40,8 +40,27 @@ if(isset($_GET['sort-column']) && in_array($_GET['sort-column'], $sortableColumn
 }
 
 $offset = $perPage * ($page - 1);
-$sql = 'SELECT * FROM entries ORDER BY '.$sortColumn.' '.$direction.' LIMIT :offset, :limit'; 
+
+// 検索用
+$keyword = '名無しの権兵衛';
+if (isset($_GET['keyword']))
+{
+$keyword = $_GET['keyword'];
+}
+if(false !== strpos($keyword, '%'))
+{
+  $keyword = str_replace('%', '\\%', $keyword);
+}
+if(false !== strpos($keyword, '_'))
+{
+  $keyword = str_replace('_', '\\_', $keyword);
+}
+
+$name = "%{$keyword}%"; // 内部変数は{}をつける癖をつけよう
+
+$sql = 'SELECT * FROM entries WHERE name LIKE :name ORDER BY '.$sortColumn.' '.$direction.' LIMIT :offset, :limit';
 $stmt = $pdo->prepare($sql);
+$stmt->bindValue(':name', $name, PDO::PARAM_STR);
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
 $stmt->execute();
@@ -208,20 +227,20 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <ul class="pagination pagination-lg justify-content-center">
           <?php if($page > 1): ?>
           <li class="page-item">
-            <a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $page - 1; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>">前へ
+            <a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $page - 1; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>&keyword=<?php echo $keyword; ?>">前へ
             </a>
           </li>
           <?php endif; ?>
           <?php for ($i = 1; $i <= $totalPages; $i++): ?>
           <li class="page-item <?php if ($page === $i) {echo 'disabled';} ?>"> <!-- 開いているページのみclass="disabled"にする -->
-            <a class="page-link <?php if ($page === $i) {echo 'active';} ?>" href="?limit=<?php echo $perPage; ?>&page=<?php echo $i; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>">
+            <a class="page-link <?php if ($page === $i) {echo 'active';} ?>" href="?limit=<?php echo $perPage; ?>&page=<?php echo $i; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>&keyword=<?php echo $keyword; ?>">
             <?php echo $i; ?>
             </a>
           </li>
           <?php endfor; ?>
           <?php if($page < $totalPages): ?>
           <li class="page-item">
-            <a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $page + 1; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>">次へ
+            <a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $page + 1; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>&keyword=<?php echo $keyword; ?>">次へ
             </a>
           </li>
           <?php endif; ?>
@@ -264,15 +283,10 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
           <div class="row justify-content-center">
             <div class="col-lg-2 text-center">
-              <input class="form-control" type="submit""> 
+              <input type="text" class="my-2 form-control" name="keyword" placeholder="ここに名前を表示する"> <!-- 検索フォームの設置 -->
+              <input class="my-2 form-control" type="submit">
             </div>
           </div>
-
-          <!-- テスト:検索フォームの設置 -->
-          <!-- <div class="my-2 input-group">
-            <input type="text" class="form-control" placeholder="検索したいキーワードを入力してください">
-            <button class="btn btn-outline-info" type="button">検索</button>
-          </div> -->
 
         </div>
       </form>
