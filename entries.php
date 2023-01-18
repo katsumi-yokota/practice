@@ -3,6 +3,7 @@ $pdo = new PDO('mysql:dbname=form-db;host=localhost;charset=utf8', 'yamadasan', 
 
 // エントリーをデフォルトで５件、指定された場合は１０件、１５件、２０件表示
 $perPage = 5; // 初期化。デフォルトで１ページ５件表示
+
 if(isset($_GET['limit']))
 {
   $perPage = (int)$_GET['limit'];
@@ -14,8 +15,38 @@ if ($perPage <= 0)
   $perPage = 5;
 }
 
-$total = $pdo->query('SELECT COUNT(*) FROM entries')->fetchColumn();
-$totalPages = ceil($total / $perPage); 
+// 検索用
+$keyword = ''; // 初期化
+if (isset($_GET['keyword'])) // 直す
+{
+  $keyword = $_GET['keyword'];
+}
+
+if(false !== strpos($keyword, '%'))
+{
+  $keyword = str_replace('%', '\\%', $keyword);
+}
+if(false !== strpos($keyword, '_'))
+{
+  $keyword = str_replace('_', '\\_', $keyword);
+}
+
+// 検索結果次第でトータルページを変更
+$sql = 'SELECT COUNT(*) AS entry_count FROM entries'; // AS（～として）で別名をつける
+if (!empty($keyword))
+{
+  $sql = 'SELECT COUNT(*) AS entry_count FROM entries WHERE name LIKE :name';
+}
+
+$stmt = $pdo->prepare($sql);
+if (!empty($keyword))
+{
+  $name = "%{$keyword}%";
+  $stmt->bindValue(':name', $name, PDO::PARAM_STR);
+}
+$stmt->execute();
+$total = $stmt->fetch(PDO::FETCH_ASSOC);
+$totalPages = ceil($total['COUNT(*)'] / $perPage); // $totalPagesに、$total['COUNT(*)']で検索された文字が存在する「数」を取得して($totalでは絶対にうまくいかない)、１ページあたりの表示件数で割って、ceilで切り上げた数字を格納
 
 // 存在するページが入力された場合はそのページに飛ばし、そうでなければ1ページ目に飛ばす。三項演算子を使うことも可能
 $page = 1; // 初期化
@@ -40,22 +71,6 @@ if(isset($_GET['sort-column']) && in_array($_GET['sort-column'], $sortableColumn
 }
 
 $offset = $perPage * ($page - 1);
-
-// 検索用
-$keyword = ''; // 初期化
-if (isset($_GET['keyword'])) // 直す
-{
-  $keyword = $_GET['keyword'];
-}
-
-if(false !== strpos($keyword, '%'))
-{
-  $keyword = str_replace('%', '\\%', $keyword);
-}
-if(false !== strpos($keyword, '_'))
-{
-  $keyword = str_replace('_', '\\_', $keyword);
-}
 
 $sql = 'SELECT * FROM entries ORDER BY '.$sortColumn.' '.$direction.' LIMIT :offset, :limit';
 if (!empty($keyword))
