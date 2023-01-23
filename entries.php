@@ -1,5 +1,5 @@
 <?php
-$pdo = new PDO('mysql:dbname=form-db;host=localhost;charset=utf8', 'yamadasan', '1q2w3e4r5t'); 
+$pdo = new PDO('mysql:dbname=form-db;host=localhost;charset=utf8', 'yamadasan', '1q2w3e4r5t');
 
 // エントリーをデフォルトで５件、指定された場合は１０件、１５件、２０件表示
 $perPage = 5; // 初期化。デフォルトで１ページ５件表示
@@ -15,38 +15,70 @@ if ($perPage <= 0)
   $perPage = 5;
 }
 
-// 検索用
-$keyword = ''; // 初期化
-if (isset($_GET['keyword'])) // 直す
+// 共通化のテスト ここから
+// sanitizeColumn関数をつくって簡潔にサニタイズ
+$name = '';
+$email = '';
+function sanitizeColumn($value)
 {
-  $keyword = $_GET['keyword'];
+  if (false !== strpos($value, '%'))
+  {
+    $value = str_replace('%', '\\%', $value); // %をサニタイズ
+  }
+  if (false !== strpos($value, '_'))
+  {
+    $value = str_replace('_', '\\_', $value); // _をサニタイズ
+  }
+  return $value;
 }
 
-if(false !== strpos($keyword, '%'))
+if (isset($_GET['name']))
 {
-  $keyword = str_replace('%', '\\%', $keyword);
+  $name = sanitizeColumn($_GET['name']);
 }
-if(false !== strpos($keyword, '_'))
+if (isset($_GET['email']))
 {
-  $keyword = str_replace('_', '\\_', $keyword);
+  $email = sanitizeColumn($_GET['email']);
+}
+
+$columns = ['id', 'name', 'email', 'gender', 'position', 'work', 'question'];
+$values = [];
+foreach ($columns as $column)
+{
+  if (isset($_GET[$column]))
+  {
+    $values[$column] = sanitizeColumn($_GET[$column]);
+  }
+}
+
+$conditions = [];
+foreach ($values as $key => $value)
+{
+  if (!empty($value))
+  {
+    $conditions[] = "{$key} LIKE :{$key}";
+  }
+}
+
+$where = '';
+if (!empty($conditions)) {
+  $where = ' WHERE ' . implode(' AND ', $conditions);
 }
 
 // 検索結果次第でトータルページを変更
-$sql = 'SELECT COUNT(*) AS entry_count FROM entries'; // AS（～として）で別名をつける
-if (!empty($keyword))
-{
-  $sql = 'SELECT COUNT(*) AS entry_count FROM entries WHERE name LIKE :name';
-}
+$sql = 'SELECT COUNT(*) AS entry_count FROM entries' . $where;
 
 $stmt = $pdo->prepare($sql);
-if (!empty($keyword))
+foreach ($values as $key => $value)
 {
-  $name = "%{$keyword}%";
-  $stmt->bindValue(':name', $name, PDO::PARAM_STR);
+  if (!empty($value))
+  {
+    $stmt->bindValue(":{$key}", "%{$value}%", PDO::PARAM_STR);
+  }
 }
 $stmt->execute();
 $total = $stmt->fetch(PDO::FETCH_ASSOC);
-$totalPages = ceil($total['COUNT(*)'] / $perPage); // $totalPagesに、$total['COUNT(*)']で検索された文字が存在する「数」を取得して($totalでは絶対にうまくいかない)、１ページあたりの表示件数で割って、ceilで切り上げた数字を格納
+$totalPages = ceil($total['entry_count'] / $perPage); // $totalPagesに、$total['COUNT(*)']で検索された文字が存在する「数」を取得して($totalでは絶対にうまくいかない)、１ページあたりの表示件数で割って、ceilで切り上げた数字を格納
 
 // 存在するページが入力された場合はそのページに飛ばし、そうでなければ1ページ目に飛ばす。三項演算子を使うことも可能
 $page = 1; // 初期化
@@ -72,18 +104,20 @@ if(isset($_GET['sort-column']) && in_array($_GET['sort-column'], $sortableColumn
 
 $offset = $perPage * ($page - 1);
 
-$sql = 'SELECT * FROM entries ORDER BY '.$sortColumn.' '.$direction.' LIMIT :offset, :limit';
-if (!empty($keyword))
-{
-  $sql = 'SELECT * FROM entries WHERE name LIKE :name ORDER BY '.$sortColumn.' '.$direction.' LIMIT :offset, :limit'; 
-}
+
+// 保存用
+$sql = 'SELECT * FROM entries'.$where.' ORDER BY '.$sortColumn.' '.$direction.' LIMIT :offset, :limit';
 
 $stmt = $pdo->prepare($sql);
-if (!empty($keyword))
+foreach ($values as $key => $value)
 {
-  $name = "%{$keyword}%"; // 内部変数は{}をつける癖をつけよう // 可読性を考えると一度しか書かないので書かなくてもよい
-  $stmt->bindValue(':name', $name, PDO::PARAM_STR); // $keywordが空ではない場合は紐づける
+  if (!empty($value))
+  {
+    $stmt->bindValue(":{$key}", "%{$value}%", PDO::PARAM_STR);
+  }
 }
+
+// 共通部分
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
 $stmt->execute();
@@ -111,119 +145,119 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <th>
               <!-- 各カラムを「ワンクリック目は昇順にソート」するコードを追加する -->
               <?php if ($sortColumn !== 'id'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=id&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=id&direction=asc&keyword=<?php echo $name; ?>">
               id
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'id' && $direction === 'desc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=id&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=id&direction=asc&keyword=<?php echo $name; ?>">
               id <?php if ($sortColumn === 'id' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'id' && $direction === 'asc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=id&direction=desc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=id&direction=desc&keyword=<?php echo $name; ?>">
               id <?php if ($sortColumn === 'id' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
               </a>
               <?php endif; ?>
             </th>
             <th>
               <?php if ($sortColumn !== 'name'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=name&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=name&direction=asc&keyword=<?php echo $name; ?>">
               名前
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'name' && $direction === 'desc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=name&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=name&direction=asc&keyword=<?php echo $name; ?>">
               名前 <?php if ($sortColumn === 'name' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'name' && $direction === 'asc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=name&direction=desc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=name&direction=desc&keyword=<?php echo $name; ?>">
               名前 <?php if ($sortColumn === 'name' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
               </a>
               <?php endif; ?>
             </th>
             <th>
               <?php if ($sortColumn !== 'email'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=email&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=email&direction=asc&keyword=<?php echo $name; ?>">
               メールアドレス
               </a>
               <?php endif; ?> 
               <?php if ($sortColumn === 'email' && $direction === 'desc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=email&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=email&direction=asc&keyword=<?php echo $name; ?>">
               メールアドレス <?php if ($sortColumn === 'email' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'email' && $direction === 'asc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>$page=<?php echo $page; ?>&sort-column=email&direction=desc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>$page=<?php echo $page; ?>&sort-column=email&direction=desc&keyword=<?php echo $name; ?>">
               メールアドレス <?php if ($sortColumn == 'email' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
               </a>
               <?php endif; ?>
             </th>
             <th>
               <?php if ($sortColumn !== 'gender'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=gender&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=gender&direction=asc&keyword=<?php echo $name; ?>">
               性別
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'gender' && $direction === 'desc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=gender&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=gender&direction=asc&keyword=<?php echo $name; ?>">
               性別 <?php if ($sortColumn === 'gender' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'gender' && $direction === 'asc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=gender&direction=desc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=gender&direction=desc&keyword=<?php echo $name; ?>">
               性別 <?php if ($sortColumn === 'gender' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
               </a>
               <?php endif; ?>
             </th>
             <th>
               <?php if ($sortColumn !== 'position'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=position&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=position&direction=asc&keyword=<?php echo $name; ?>">
               希望のポジション
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'position' && $direction === 'desc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=position&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=position&direction=asc&keyword=<?php echo $name; ?>">
               希望のポジション <?php if ($sortColumn === 'position' && $direction === 'desc'): {echo '↑';}?><?php endif; ?>
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'position' && $direction === 'asc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=position&direction=desc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=position&direction=desc&keyword=<?php echo $name; ?>">
               希望のポジション <?php if ($sortColumn === 'position' && $direction === 'asc'): {echo '↓';}?><?php endif; ?>
               </a>
               <?php endif; ?>
             </th>
             <th>
               <?php if ($sortColumn !== 'work'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=work&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=work&direction=asc&keyword=<?php echo $name; ?>">
               前職
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'work' && $direction === 'desc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=work&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=work&direction=asc&keyword=<?php echo $name; ?>">
               前職 <?php if ($sortColumn === 'work' && $direction === 'desc'): {echo '↑';}?><?php endif; ?>
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'work' && $direction === 'asc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=work&direction=desc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=work&direction=desc&keyword=<?php echo $name; ?>">
               前職 <?php if ($sortColumn === 'work' && $direction === 'asc'): {echo '↓';}?><?php endif; ?>
               </a>
               <?php endif; ?>
             </th>
             <th>
               <?php if ($sortColumn !== 'question'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=question&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=question&direction=asc&keyword=<?php echo $name; ?>">
               質問
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'question' && $direction === 'desc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=question&direction=asc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=question&direction=asc&keyword=<?php echo $name; ?>">
               質問 <?php if ($sortColumn === 'question' && $direction === 'desc'): {echo '↑';} ?><?php endif; ?>
               </a>
               <?php endif; ?>
               <?php if ($sortColumn === 'question' && $direction ==='asc'): ?>
-              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=question&direction=desc&keyword=<?php echo $keyword; ?>">
+              <a href="entries.php?limit=<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=question&direction=desc&keyword=<?php echo $name; ?>">
               質問 <?php if ($sortColumn === 'question' && $direction === 'asc'): {echo '↓';} ?><?php endif; ?>
               </a>
               <?php endif; ?>
@@ -250,20 +284,20 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <ul class="pagination pagination-lg justify-content-center">
           <?php if($page > 1): ?>
           <li class="page-item">
-            <a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $page - 1; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>&keyword=<?php echo $keyword; ?>">前へ
+            <a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $page - 1; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>&keyword=<?php echo $name; ?>">前へ
             </a>
           </li>
           <?php endif; ?>
           <?php for ($i = 1; $i <= $totalPages; $i++): ?>
           <li class="page-item <?php if ($page === $i) {echo 'disabled';} ?>"> <!-- 開いているページのみclass="disabled"にする -->
-            <a class="page-link <?php if ($page === $i) {echo 'active';} ?>" href="?limit=<?php echo $perPage; ?>&page=<?php echo $i; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>&keyword=<?php echo $keyword; ?>">
+            <a class="page-link <?php if ($page === $i) {echo 'active';} ?>" href="?limit=<?php echo $perPage; ?>&page=<?php echo $i; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>&keyword=<?php echo $name; ?>">
             <?php echo $i; ?>
             </a>
           </li>
           <?php endfor; ?>
           <?php if($page < $totalPages): ?>
           <li class="page-item">
-            <a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $page + 1; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>&keyword=<?php echo $keyword; ?>">次へ
+            <a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $page + 1; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>&keyword=<?php echo $name; ?>">次へ
             </a>
           </li>
           <?php endif; ?>
@@ -306,7 +340,13 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
           <div class="row justify-content-center">
             <div class="col-lg-2 text-center">
-              <input type="text" class="my-2 form-control" name="keyword" placeholder="ここに名前を表示する" value="<?php echo $keyword; ?>"> <!-- 検索フォームの設置 -->
+            <!-- <input type="text" class="my-2 form-control" name="id" placeholder="id" value="<?php echo $email; ?>"> -->
+              <input type="text" class="my-2 form-control" name="name" placeholder="名前" value="<?php echo $name; ?>"> <!-- name検索フォームの設置 -->
+              <input type="text" class="my-2 form-control" name="email" placeholder="メールアドレス" value="<?php echo $email; ?>"> <!-- email検索フォームの設置 -->
+              <!-- <input type="text" class="my-2 form-control" name="gender" placeholder="性別" value=" <?php echo $gender; ?>"> 
+              <input type="text" class="my-2 form-control" name="position" placeholder="希望ポジション" value="<?php echo $position; ?>">
+              <input type="text" class="my-2 form-control" name="work" placeholder="前職" value="<?php echo $work; ?>"> 
+              <input type="text" class="my-2 form-control" name="question" placeholder="質問" value="<?php echo $question; ?>"> -->
               <input class="my-2 form-control" type="submit">
             </div>
           </div>
