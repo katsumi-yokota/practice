@@ -1,8 +1,8 @@
 <?php
 $pdo = new PDO('mysql:dbname=form-db;host=localhost;charset=utf8', 'yamadasan', '1q2w3e4r5t');
 
-// エントリーをデフォルトで５件、指定された場合は１０件、１５件、２０件表示
-$perPage = 5; // 初期化。デフォルトで１ページ５件表示
+$perPage = 5; // デフォルトで１ページ５件を表示
+$currentPage = 1; // デフォルトで1ページ目を表示
 
 if(isset($_GET['limit']))
 {
@@ -15,10 +15,14 @@ if ($perPage <= 0)
   $perPage = 5;
 }
 
-// 共通化のテスト ここから
-// sanitizeColumn関数をつくって簡潔にサニタイズ
+// 独自関数sanitizeColumnをつくってサニタイズ
+$id = '';
 $name = '';
 $email = '';
+$gender = '';
+$position = '';
+$work = '';
+$question = '';
 function sanitizeColumn($value)
 {
   if (false !== strpos($value, '%'))
@@ -30,15 +34,6 @@ function sanitizeColumn($value)
     $value = str_replace('_', '\\_', $value); // _をサニタイズ
   }
   return $value;
-}
-
-if (isset($_GET['name']))
-{
-  $name = sanitizeColumn($_GET['name']);
-}
-if (isset($_GET['email']))
-{
-  $email = sanitizeColumn($_GET['email']);
 }
 
 $columns = ['id', 'name', 'email', 'gender', 'position', 'work', 'question'];
@@ -61,11 +56,12 @@ foreach ($values as $key => $value)
 }
 
 $where = '';
-if (!empty($conditions)) {
+if (!empty($conditions))
+{
   $where = ' WHERE ' . implode(' AND ', $conditions);
 }
 
-// 検索結果次第でトータルページを変更
+// 検索結果次第でページ数を変更
 $sql = 'SELECT COUNT(*) AS entry_count FROM entries' . $where;
 
 $stmt = $pdo->prepare($sql);
@@ -78,31 +74,29 @@ foreach ($values as $key => $value)
 }
 $stmt->execute();
 $total = $stmt->fetch(PDO::FETCH_ASSOC);
-$totalPages = ceil($total['entry_count'] / $perPage); // $totalPagesに、$total['COUNT(*)']で検索された文字が存在する「数」を取得して($totalでは絶対にうまくいかない)、１ページあたりの表示件数で割って、ceilで切り上げた数字を格納
+$totalPages = ceil($total['entry_count'] / $perPage); // $totalPagesに、$total['entry_count']で全エントリー数を取得して、１ページあたりの表示件数で割って、ceilで切り上げた数字を格納
 
-// 存在するページが入力された場合はそのページに飛ばし、そうでなければ1ページ目に飛ばす。三項演算子を使うことも可能
-$page = 1; // 初期化
+// 存在するページが入力された場合はそのページに遷移
 if(isset($_GET['page']) && preg_match('/^[1-9][0-9]*$/', $_GET['page']) && $_GET['page'] <= $totalPages) 
 {
-  $page = (int)$_GET['page'];
+  $currentPage = (int)$_GET['page'];
 }
 
-$direction = 'asc'; // 初期化
+$direction = 'asc'; 
 if(isset($_GET['direction']) && $_GET['direction'] === 'desc')
 {
   $direction = 'desc';
 }
 
-// ソート可能なカラムのnameの配列をつくりin_arrayで配列にnameがあるかチェックしてある場合はそのnameを変数sortColumnに格納
-$sortColumn = 'id'; // 初期化
+// カラム名の配列をつくり、in_arrayで配列にカラム名があるかチェックして、ある場合はそのカラム名を$sortColumnに格納
+$sortColumn = 'id'; 
 if(isset($_GET['sort-column']) && in_array($_GET['sort-column'], $columns, true)) // 第三引数はtrueにして厳密に比較
 {
   $sortColumn = $_GET['sort-column'];
 }
 
-$offset = $perPage * ($page - 1);
+$offset = $perPage * ($currentPage - 1);
 
-// 保存用
 $sql = 'SELECT * FROM entries'.$where.' ORDER BY '.$sortColumn.' '.$direction.' LIMIT :offset, :limit';
 
 $stmt = $pdo->prepare($sql);
@@ -120,10 +114,20 @@ $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
 $stmt->execute();
 $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// html_build_queryのテスト
-$paramatersForHeader = ['limit' => $perPage, 'page' => $page, 'direction' => $direction, 'name' => $name, 'email' => $email]; // ヘッダー用
-var_dump(http_build_query($paramatersForHeader));
-$paramatersForPagination = ['limit' => $perPage, 'page' => $page, 'sort-column' => $sortColumn, 'direction' => $direction]; // ページネーション用
+// ソート及びページネーション機能の共通化用
+$parametersForSort = ['limit' => $perPage, 'page' => $currentPage]; // ソート用
+$parametersForPagination = ['limit' => $perPage, 'direction' => $direction, 'sort-column' => $sortColumn]; // ページネーション用
+
+foreach ($values as $key => $value)
+{
+  if (empty($value))
+  {
+    continue; // emptyなら処理を終わらせて次に進む
+  }
+  // emptyでなければ、次の処理をする
+  $parametersForSort[$key] = $value;
+  $parametersForPagination[$key] = $value;
+}
 ?>
 
 <!DOCTYPE html>
@@ -146,17 +150,17 @@ $paramatersForPagination = ['limit' => $perPage, 'page' => $page, 'sort-column' 
           <tr>
           <?php foreach ($columns as $column): ?>
             <th>
-              <!-- html_build_queryのテスト -->
+              <!-- ソート機能の共通化 -->
               <?php if ($column !== $sortColumn): ?> <!-- ワンクリック目は昇順にソート -->
-              <a href="entries.php?<?php echo http_build_query($paramatersForHeader); ?>&sort-column=<?php echo $column; ?>">
-              <?php echo $column; ?>は必ず昇順
+              <a href="entries.php?<?php echo http_build_query($parametersForSort); ?>&sort-column=<?php echo $column; ?>&direction=asc">
+              <?php echo $column; ?>
               </a>
-              <?php elseif ($direction === 'asc'): ?>
-              <a href="entries.php?<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=<?php echo $column; ?>&direction=desc&name=<?php echo $name; ?>">
+              <?php elseif ($direction === 'asc'): ?> <!-- 昇順の時は降順にソート-->
+              <a href="entries.php?<?php echo http_build_query($parametersForSort); ?>&sort-column=<?php echo $column; ?>&direction=desc">
               <?php echo $column; ?>↑
               </a>
-              <?php else: ?>
-              <a href="entries.php?<?php echo $perPage; ?>&page=<?php echo $page; ?>&sort-column=<?php echo $column; ?>&direction=asc&name=<?php echo $name; ?>">
+              <?php else: ?> <!-- 降順の時（クリックされたカラムであり、かつ昇順でない時）は降順にソート -->
+              <a href="entries.php?<?php echo http_build_query($parametersForSort); ?>&sort-column=<?php echo $column; ?>&direction=asc">
               <?php echo $column; ?>↓
               </a>
               <?php endif; ?>
@@ -179,25 +183,25 @@ $paramatersForPagination = ['limit' => $perPage, 'page' => $page, 'sort-column' 
       <?php endforeach; ?>
       </tbody>
     </table>
-
+      <!-- ページネーションの共通化 -->
       <nav aria-label="Page navigation" class="my-5">
         <ul class="pagination pagination-lg justify-content-center">
-          <?php if($page > 1): ?>
+          <?php if($currentPage > 1): ?>
           <li class="page-item">
-            <a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $page - 1; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>&name=<?php echo $name; ?>">前へ
+            <a class="page-link" href="entries.php?<?php echo http_build_query($parametersForPagination); ?>&page=<?php echo $currentPage - 1; ?>">前へ
             </a>
           </li>
           <?php endif; ?>
           <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-          <li class="page-item <?php if ($page === $i) {echo 'disabled';} ?>"> <!-- 開いているページのみclass="disabled"にする -->
-            <a class="page-link <?php if ($page === $i) {echo 'active';} ?>" href="?limit=<?php echo $perPage; ?>&page=<?php echo $i; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>&name=<?php echo $name; ?>">
+          <li class="page-item <?php if ($currentPage === $i) {echo 'disabled';} ?>"> <!-- 開いているページのみclass="disabled"にしてクリック不能化 -->
+            <a class="page-link <?php if ($currentPage === $i) {echo 'active';} ?>" href="entries.php?<?php echo http_build_query($parametersForPagination); ?>&page=<?php echo $i; ?>">
             <?php echo $i; ?>
             </a>
           </li>
           <?php endfor; ?>
-          <?php if($page < $totalPages): ?>
+          <?php if($currentPage < $totalPages): ?>
           <li class="page-item">
-            <a class="page-link" href="?limit=<?php echo $perPage; ?>&page=<?php echo $page + 1; ?>&sort-column=<?php echo $sortColumn; ?>&direction=<?php echo $direction; ?>&name=<?php echo $name; ?>">次へ
+            <a class="page-link" href="entries.php?<?php echo http_build_query($parametersForPagination); ?>&page=<?php echo $currentPage + 1; ?>">次へ
             </a>
           </li>
           <?php endif; ?>
@@ -216,7 +220,7 @@ $paramatersForPagination = ['limit' => $perPage, 'page' => $page, 'sort-column' 
                 <option value="15" <?php if ($perPage === 15): ?>selected<?php endif; ?>>15件</option>
                 <option value="20" <?php if ($perPage === 20): ?>selected<?php endif; ?>>20件</option>
               </select>
-              <input type="hidden" name="page" value="<?php if(isset($page)) {echo $page;} ?>"> 
+              <input type="hidden" name="page" value="<?php if(isset($currentPage)) {echo $currentPage;} ?>"> 
             </div>
           </div>
 
@@ -238,15 +242,16 @@ $paramatersForPagination = ['limit' => $perPage, 'page' => $page, 'sort-column' 
             </div>
           </div>
             
+          <!-- 検索フォーム -->
           <div class="row justify-content-center">
             <div class="col-lg-2 text-center">
-            <!-- <input type="text" class="my-2 form-control" name="id" placeholder="id" value="<?php echo $email; ?>"> -->
-              <input type="text" class="my-2 form-control" name="name" placeholder="名前" value="<?php echo $name; ?>"> <!-- name検索フォームの設置 -->
-              <input type="text" class="my-2 form-control" name="email" placeholder="メールアドレス" value="<?php echo $email; ?>"> <!-- email検索フォームの設置 -->
-              <!-- <input type="text" class="my-2 form-control" name="gender" placeholder="性別" value=" <?php echo $gender; ?>"> 
+              <input type="text" class="my-2 form-control" name="id" placeholder="id" value="<?php echo $id; ?>">
+              <input type="text" class="my-2 form-control" name="name" placeholder="名前" value="<?php echo $name; ?>">
+              <input type="text" class="my-2 form-control" name="email" placeholder="メールアドレス" value="<?php echo $email; ?>">
+              <input type="text" class="my-2 form-control" name="gender" placeholder="性別" value="<?php echo $gender; ?>"> 
               <input type="text" class="my-2 form-control" name="position" placeholder="希望ポジション" value="<?php echo $position; ?>">
               <input type="text" class="my-2 form-control" name="work" placeholder="前職" value="<?php echo $work; ?>"> 
-              <input type="text" class="my-2 form-control" name="question" placeholder="質問" value="<?php echo $question; ?>"> -->
+              <input type="text" class="my-2 form-control" name="question" placeholder="質問" value="<?php echo $question; ?>">
               <input class="my-2 form-control" type="submit">
             </div>
           </div>
