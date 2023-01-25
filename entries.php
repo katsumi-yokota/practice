@@ -23,6 +23,7 @@ $gender = '';
 $position = '';
 $work = '';
 $question = '';
+$anuualIncome = '';
 function sanitizeColumn($value)
 {
   if (false !== strpos($value, '%'))
@@ -36,7 +37,7 @@ function sanitizeColumn($value)
   return $value;
 }
 
-$columns = ['id', 'name', 'email', 'gender', 'position', 'work', 'question'];
+$columns = ['id', 'name', 'email', 'gender', 'position', 'work', 'question', 'annual_income'];
 $values = [];
 foreach ($columns as $column)
 {
@@ -179,11 +180,12 @@ foreach ($values as $key => $value)
             <td><?php echo $entry['position']; ?></td>
             <td><?php echo $entry['work']; ?></td>
             <td><?php echo htmlspecialchars($entry['question'], ENT_QUOTES, 'UTF-8'); ?></td>
+            <td><?php echo $entry['annual_income']; ?></td>
           </tr>
       <?php endforeach; ?>
       </tbody>
     </table>
-      <!-- ページネーションの共通化 -->
+      <!-- ページネーション -->
       <nav aria-label="Page navigation" class="my-5">
         <ul class="pagination pagination-lg justify-content-center">
           <?php if($currentPage > 1): ?>
@@ -252,6 +254,7 @@ foreach ($values as $key => $value)
               <input type="text" class="my-2 form-control" name="position" placeholder="希望ポジション" value="<?php echo $position; ?>">
               <input type="text" class="my-2 form-control" name="work" placeholder="前職" value="<?php echo $work; ?>"> 
               <input type="text" class="my-2 form-control" name="question" placeholder="質問" value="<?php echo $question; ?>">
+              <input type="number" class="my-2 form-control" name="annual_income" placeholder="希望年収" value="<?php echo $anuualIncome; ?>">
               <input class="my-2 form-control" type="submit">
             </div>
           </div>
