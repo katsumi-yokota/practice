@@ -58,6 +58,11 @@ foreach ($columns as $column)
   }
 }
 
+// 範囲検索用
+$annualIncomeMin = $_GET['annual_income_min'];
+$annualIncomeMax = $_GET['annual_income_max'];
+$whereForSearchRange = '';
+
 $conditions = [];
 foreach ($values as $key => $value)
 {
@@ -65,6 +70,17 @@ foreach ($values as $key => $value)
   {
     $conditions[] = "{$key} LIKE :{$key}";
   }
+}
+
+if (!empty($annualIncomeMin))
+{
+  $whereForSearchRange = 'annual_income >= :annual_income_min';
+  $conditions[] = $whereForSearchRange;
+}
+if (!empty($annualIncomeMax))
+{
+  $whereForSearchRange = 'annual_income <= :annual_income_max';
+  $conditions[] = $whereForSearchRange;
 }
 
 $where = '';
@@ -77,6 +93,7 @@ if (!empty($conditions))
 $sql = 'SELECT COUNT(*) AS entry_count FROM entries' . $where;
 
 $stmt = $pdo->prepare($sql);
+
 foreach ($values as $key => $value)
 {
   if (!empty($value))
@@ -84,6 +101,16 @@ foreach ($values as $key => $value)
     $stmt->bindValue(":{$key}", "%{$value}%", PDO::PARAM_STR);
   }
 }
+
+if (!empty($annualIncomeMin))
+{
+  $stmt->bindValue(':annual_income_min', $annualIncomeMin, PDO::PARAM_INT);
+}
+if (!empty($annualIncomeMax))
+{
+  $stmt->bindValue(':annual_income_max', $annualIncomeMax, PDO::PARAM_INT);
+}
+
 $stmt->execute();
 $total = $stmt->fetch(PDO::FETCH_ASSOC);
 $totalPages = ceil($total['entry_count'] / $perPage); // $totalPagesに、$total['entry_count']で全エントリー数を取得して、１ページあたりの表示件数で割って、ceilで切り上げた数字を格納
@@ -118,6 +145,15 @@ foreach ($values as $key => $value)
   {
     $stmt->bindValue(":{$key}", "%{$value}%", PDO::PARAM_STR);
   }
+}
+
+if (!empty($annualIncomeMin))
+{
+  $stmt->bindValue(':annual_income_min', $annualIncomeMin, PDO::PARAM_INT);
+}
+if (!empty($annualIncomeMax))
+{
+  $stmt->bindValue(':annual_income_max', $annualIncomeMax, PDO::PARAM_INT);
 }
 
 // 共通部分
@@ -265,7 +301,8 @@ foreach ($values as $column => $value)
               <input type="text" class="my-2 form-control" name="position" placeholder="希望ポジション" value="<?php if (!empty($values)) {echo $values['position'];}?>">
               <input type="text" class="my-2 form-control" name="work" placeholder="前職" value="<?php if (!empty($values)) {echo $values['work'];}?>"> 
               <input type="text" class="my-2 form-control" name="question" placeholder="質問" value="<?php if (!empty($values)) {echo $values['question'];}?>">
-              <input type="number" class="my-2 form-control" name="annual_income" placeholder="希望年収（万円）" value="<?php if (!empty($values)) {echo $values['annual_income'];}?>">
+              <input type="number" class="my-2 form-control" name="annual_income_min" placeholder="下限希望年収（万円）" value="<?php if (!empty($values)) {echo $annualIncomeMin;}?>">
+              <input type="number" class="my-2 form-control" name="annual_income_max" placeholder="上限希望年収（万円）" value="<?php if (!empty($values)) {echo $annualIncomeMax;}?>">
               <input class="my-2 form-control" type="submit">
             </div>
           </div>
