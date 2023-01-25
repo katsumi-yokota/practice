@@ -37,7 +37,18 @@ function sanitizeColumn($value)
   return $value;
 }
 
-$columns = ['id', 'name', 'email', 'gender', 'position', 'work', 'question', 'annual_income'];
+$columns = ['id', 'name', 'email', 'gender', 'position', 'work', 'question', 'annual_income']; 
+// カラム名を、エントリー画面と同じにする
+$labels = [
+  'id' => 'id',
+  'name' => 'お名前',
+  'email' => 'メールアドレス',
+  'gender' => '性別',
+  'position' => '希望ポジション',
+  'work' => '前職',
+  'question' => '質問',
+  'annual_income' => '希望年収',
+];
 $values = [];
 foreach ($columns as $column)
 {
@@ -119,15 +130,15 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $parametersForSort = ['limit' => $perPage, 'page' => $currentPage]; // ソート用
 $parametersForPagination = ['limit' => $perPage, 'direction' => $direction, 'sort-column' => $sortColumn]; // ページネーション用
 
-foreach ($values as $key => $value)
+foreach ($values as $column => $value)
 {
   if (empty($value))
   {
     continue; // emptyなら処理を終わらせて次に進む
   }
   // emptyでなければ、次の処理をする
-  $parametersForSort[$key] = $value;
-  $parametersForPagination[$key] = $value;
+  $parametersForSort[$column] = $value;
+  $parametersForPagination[$column] = $value;
 }
 ?>
 
@@ -154,15 +165,15 @@ foreach ($values as $key => $value)
               <!-- ソート機能の共通化 -->
               <?php if ($column !== $sortColumn): ?> <!-- ワンクリック目は昇順にソート -->
               <a href="entries.php?<?php echo http_build_query($parametersForSort); ?>&sort-column=<?php echo $column; ?>&direction=asc">
-              <?php echo $column; ?>
+              <?php echo $labels[$column]; ?>
               </a>
               <?php elseif ($direction === 'asc'): ?> <!-- 昇順の時は降順にソート-->
               <a href="entries.php?<?php echo http_build_query($parametersForSort); ?>&sort-column=<?php echo $column; ?>&direction=desc">
-              <?php echo $column; ?>↑
+              <?php echo $labels[$column]; ?>↑
               </a>
               <?php else: ?> <!-- 降順の時（クリックされたカラムであり、かつ昇順でない時）は降順にソート -->
               <a href="entries.php?<?php echo http_build_query($parametersForSort); ?>&sort-column=<?php echo $column; ?>&direction=asc">
-              <?php echo $column; ?>↓
+              <?php echo $labels[$column]; ?>↓
               </a>
               <?php endif; ?>
             </th>
@@ -180,7 +191,7 @@ foreach ($values as $key => $value)
             <td><?php echo $entry['position']; ?></td>
             <td><?php echo $entry['work']; ?></td>
             <td><?php echo htmlspecialchars($entry['question'], ENT_QUOTES, 'UTF-8'); ?></td>
-            <td><?php echo $entry['annual_income']; ?></td>
+            <td><?php echo $entry['annual_income'] . '万円'; ?></td>
           </tr>
       <?php endforeach; ?>
       </tbody>
@@ -247,14 +258,14 @@ foreach ($values as $key => $value)
           <!-- 検索フォーム -->
           <div class="row justify-content-center">
             <div class="col-lg-2 text-center">
-              <input type="text" class="my-2 form-control" name="id" placeholder="id" value="<?php echo $id; ?>">
-              <input type="text" class="my-2 form-control" name="name" placeholder="名前" value="<?php echo $name; ?>">
-              <input type="text" class="my-2 form-control" name="email" placeholder="メールアドレス" value="<?php echo $email; ?>">
-              <input type="text" class="my-2 form-control" name="gender" placeholder="性別" value="<?php echo $gender; ?>"> 
-              <input type="text" class="my-2 form-control" name="position" placeholder="希望ポジション" value="<?php echo $position; ?>">
-              <input type="text" class="my-2 form-control" name="work" placeholder="前職" value="<?php echo $work; ?>"> 
-              <input type="text" class="my-2 form-control" name="question" placeholder="質問" value="<?php echo $question; ?>">
-              <input type="number" class="my-2 form-control" name="annual_income" placeholder="希望年収" value="<?php echo $anuualIncome; ?>">
+              <input type="number" class="my-2 form-control" name="id" placeholder="id" value="<?php if (!empty($values)) {echo $values['id'];}?>">
+              <input type="text" class="my-2 form-control" name="name" placeholder="名前" value="<?php if (!empty($values)) {echo $values['name'];}?>">
+              <input type="text" class="my-2 form-control" name="email" placeholder="メールアドレス" value="<?php if (!empty($values)) {echo $values['email'];}?>">
+              <input type="text" class="my-2 form-control" name="gender" placeholder="性別" value="<?php if (!empty($values)) {echo $values['gender'];}?>"> 
+              <input type="text" class="my-2 form-control" name="position" placeholder="希望ポジション" value="<?php if (!empty($values)) {echo $values['position'];}?>">
+              <input type="text" class="my-2 form-control" name="work" placeholder="前職" value="<?php if (!empty($values)) {echo $values['work'];}?>"> 
+              <input type="text" class="my-2 form-control" name="question" placeholder="質問" value="<?php if (!empty($values)) {echo $values['question'];}?>">
+              <input type="number" class="my-2 form-control" name="annual_income" placeholder="希望年収（万円）" value="<?php if (!empty($values)) {echo $values['annual_income'];}?>">
               <input class="my-2 form-control" type="submit">
             </div>
           </div>
