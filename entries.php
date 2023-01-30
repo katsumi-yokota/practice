@@ -59,14 +59,15 @@ foreach ($columns as $column)
 }
 
 // 範囲検索用
-if (!empty($_GET['annual_income_min']) && preg_match('/^[1-9][0-9]+$/', $_GET['annual_income_min'])) // emptyではないかつ1以上の正の整数であれば変数に格納 // 末尾 is 何？を考えねばならない
+if (isset($_GET['annual_income_min']) && preg_match('/^[0-9]+$/', $_GET['annual_income_min'])) // nullではないかつ0以上の正の整数であれば変数に格納 // 末尾 is 何？問題
 {
-$annualIncomeMin = $_GET['annual_income_min'];
+  $annualIncomeMin = $_GET['annual_income_min'];
 }
 if (!empty($_GET['annual_income_max']) && preg_match('/^[1-9][0-9]+$/', $_GET['annual_income_max']))
 {
-$annualIncomeMax = $_GET['annual_income_max'];
+  $annualIncomeMax = $_GET['annual_income_max'];
 }
+
 $whereForSearchRange = '';
 
 $conditions = [];
@@ -197,6 +198,24 @@ foreach ($values as $column => $value)
   <body>
     <header>
       <h1 class="text-center">エントリー一覧</h1>
+
+      <!-- エラーメッセージ -->
+      <?php if (!isset($_GET['annual_income_min']) || !preg_match('/^[0-9]+$/', $_GET['annual_income_min'])): ?>
+      <div class="alert alert-warning" role="alert">
+        <?php echo '下限希望年収には「0以上の正の整数」を入力してください。＜例＞300'; ?>
+      </div>
+      <?php endif; ?>
+      <?php if (empty($_GET['annual_income_max']) || !preg_match('/^[1-9][0-9]*$/', $_GET['annual_income_max'])): ?>
+      <div class="alert alert-warning " role="alert">
+        <?php echo '上限希望年収には「1以上の正の整数」を入力してください。＜例＞700'; ?>
+      </div>
+      <?php endif; ?>
+      <?php if ($_GET['annual_income_max'] < $_GET['annual_income_min']): ?>
+      <div class="alert alert-danger">
+        <?php echo '上限希望年収には下限希望年収より大きい数字を入力してください。'; ?>
+      </div>
+      <?php endif; ?>
+
     </header>
 
     <table class="table table-bordered table-striped table-hover">
@@ -307,8 +326,8 @@ foreach ($values as $column => $value)
               <input type="text" class="my-2 form-control" name="position" placeholder="希望ポジション" value="<?php if (!empty($values)) {echo $values['position'];}?>">
               <input type="text" class="my-2 form-control" name="work" placeholder="前職" value="<?php if (!empty($values)) {echo $values['work'];}?>"> 
               <input type="text" class="my-2 form-control" name="question" placeholder="質問" value="<?php if (!empty($values)) {echo $values['question'];}?>">
-              <input type="text" class="my-2 form-control" name="annual_income_min" placeholder="下限希望年収（万円）" value="<?php if (!empty($values)) {echo $annualIncomeMin;}?>">
-              <input type="text" class="my-2 form-control" name="annual_income_max" placeholder="上限希望年収（万円）" value="<?php if (!empty($values)) {echo $annualIncomeMax;}?>">
+              <input type="text" class="my-2 form-control" name="annual_income_min" placeholder="下限希望年収（万円）" value="<?php if (!empty($annualIncomeMin)) {echo $annualIncomeMin;}?>">
+              <input type="text" class="my-2 form-control" name="annual_income_max" placeholder="上限希望年収（万円）" value="<?php if (!empty($annualIncomeMax)) {echo $annualIncomeMax;}?>">
               <input class="my-2 form-control" type="submit">
             </div>
           </div>
