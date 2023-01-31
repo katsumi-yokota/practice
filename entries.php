@@ -59,44 +59,36 @@ foreach ($columns as $column)
 }
 
 // 範囲検索用
-
-// 希望年収に関するエラーメッセージ等のコード
 $messageForIncomeMin = '';
-$messageForIncomeMax = '';
+$messageForIncomeMax = ''; 
 $messageForIncomeCompare = '';
 $annualIncomeMin = '';
 $annualIncomeMax = '';
-if (!empty($_GET['annual_income_max']) && preg_match('/^[0-9]*$/',$_GET['annual_income_max']) && !empty($_GET['annual_income_min']) && preg_match('/^[0-9]*$/', $_GET['annual_income_min']) && $_GET['annual_income_max'] > $_GET['annual_income_min']) // 下限、上限共に入力されている場合
+// 演算子値を取得し格納。値が存在しない場合は空の文字列を格納
+// $annualIncomeMin、Maxに格納する前に、クッションとして変数に格納
+$dirtyAnnualIncomMin = $_GET['annual_income_min'] ?? ''; 
+$dirtyAnnualIncomMax = $_GET['annual_income_max'] ?? '';
+if (!empty($dirtyAnnualIncomMin) && !preg_match('/^[0-9]*$/', $dirtyAnnualIncomMin)) // !emptyは0を空と判定するので意図せぬ結果が生じる
 {
-  $annualIncomeMin = $_GET['annual_income_min'];
-}
-elseif (!empty($_GET['annual_income_min']) && !preg_match('/^[0-9]*$/', $_GET['annual_income_min']))
+  $messageForIncomeMin = '下限希望年収には、0以上の正の整数を入力してください。<例> 300';
+} 
+elseif (!empty($dirtyAnnualIncomMax) && !preg_match('/^[1-9][0-9]*$/', $dirtyAnnualIncomMax))
 {
-  $messageForIncomeMin = '下限希望年収には、0以上の正の整数を入力してください。<例> 300'; // エラーメッセージを格納
-}
-if (!empty($_GET['annual_income_min']) && preg_match('/^[0-9]*$/', $_GET['annual_income_min']) && !empty($_GET['annual_income_max']) && preg_match('/^[1-9][0-9]*$/', $_GET['annual_income_max']) && $_GET['annual_income_max'] > $_GET['annual_income_min']) // 下限、上限共に入力されている場合
+  $messageForIncomeMax = '上限希望年収には、1以上の正の整数を入力してください。<例> 700';
+} 
+elseif ($dirtyAnnualIncomMin && $dirtyAnnualIncomMax && $dirtyAnnualIncomMin > $dirtyAnnualIncomMax) 
 {
-  $annualIncomeMax = $_GET['annual_income_max'];
-}
-elseif (!empty($_GET['annual_income_max']) && !preg_match('/^[1-9][0-9]*$/', $_GET['annual_income_max']))
-{
-  $messageForIncomeMax = '上限希望年収には、1以上の正の整数を入力してください。<例> 700'; // エラーメッセージを格納
-}
-
-if (!empty($_GET['annual_income_max']) && $_GET['annual_income_min'] > $_GET['annual_income_max'])
-{
-  $messageForIncomeCompare = '上限希望年収には下限希望年収より大きい数字を入力してください。'; // 下限が上限より大きければエラーメッセージを格納
-}
-
-if (empty($_GET['annual_income_max']) && !empty($_GET['annual_income_min']) && preg_match('/^[0-9]*$/', $_GET['annual_income_min']))
-{
-  $annualIncomeMin = $_GET['annual_income_min'];
-}
-
-if (empty($_GET['annual_income_min']) && !empty($_GET['annual_income_max']) && preg_match('/^[0-9]*$/', $_GET['annual_income_max']))
-{
-  $annualIncomeMax = $_GET['annual_income_max'];
-}
+  $messageForIncomeCompare = '上限希望年収には下限希望年収より大きい数字を入力してください。';
+} 
+else
+  if (!empty($dirtyAnnualIncomMin))
+  {
+    $annualIncomeMin = $dirtyAnnualIncomMin;
+  }
+  if (!empty($dirtyAnnualIncomMax))
+  {
+    $annualIncomeMax = $dirtyAnnualIncomMax;
+  }
 
 $conditions = [];
 foreach ($values as $key => $value)
@@ -209,6 +201,9 @@ foreach ($values as $column => $value)
   $parametersForSort[$column] = $value;
   $parametersForPagination[$column] = $value;
 }
+
+// URLパラメータ削除用
+$baseUrl = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 ?>
 
 <!DOCTYPE html>
@@ -224,6 +219,9 @@ foreach ($values as $column => $value)
   <body>
     <header>
       <h1 class="text-center">エントリー一覧</h1>
+
+      <!-- URLパラメータ削除ボタン -->
+      <a class="btn btn-info mb-2" href="<?php echo $baseUrl; ?>">URLパラメータを削除</a>
 
       <!-- エラーメッセージ -->
       <?php if (!empty($messageForIncomeMin)): ?> 
