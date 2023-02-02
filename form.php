@@ -9,11 +9,6 @@ $dangerName = filter_input(INPUT_POST, 'name');
 $dangerEmail = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
 $dangerPosition = filter_input(INPUT_POST, 'position');
 
-// デバック用
-echo $dangerName . '名前' . '<br>';
-echo $dangerEmail . 'メールアドレス' . '<br>';
-echo $dangerPosition . 'ポジション';
-
 if(empty($dangerName))
 {
      $noName = 'お名前を入力してください';
