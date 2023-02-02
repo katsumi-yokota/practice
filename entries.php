@@ -2,12 +2,8 @@
 $pdo = new PDO('mysql:dbname=form-db;host=localhost;charset=utf8', 'yamadasan', '1q2w3e4r5t');
 
 $perPage = 5; // デフォルトで１ページ５件を表示
+$perPage = filter_input(INPUT_GET, 'limit', FILTER_VALIDATE_INT) ?? 5; // NULLなら5件
 $currentPage = 1; // デフォルトで1ページ目を表示
-
-if(isset($_GET['limit']))
-{
-  $perPage = (int)$_GET['limit'];
-}
 
 // 0以下の場合は5件表示
 if ($perPage <= 0)
@@ -16,14 +12,6 @@ if ($perPage <= 0)
 }
 
 // 独自関数sanitizeColumnをつくってサニタイズ
-$id = '';
-$name = '';
-$email = '';
-$gender = '';
-$position = '';
-$work = '';
-$question = '';
-$anuualIncome = '';
 function sanitizeColumn($value)
 {
   if (false !== strpos($value, '%'))
@@ -39,7 +27,8 @@ function sanitizeColumn($value)
 
 $columns = ['id', 'name', 'email', 'gender', 'position', 'work', 'question', 'annual_income']; 
 // カラム名を、エントリー画面と同じにする
-$labels = [
+$labels = 
+[
   'id' => 'id',
   'name' => 'お名前',
   'email' => 'メールアドレス',
@@ -49,13 +38,11 @@ $labels = [
   'question' => '質問',
   'annual_income' => '希望年収',
 ];
+
 $values = [];
 foreach ($columns as $column)
 {
-  if (isset($_GET[$column]))
-  {
-    $values[$column] = sanitizeColumn($_GET[$column]);
-  }
+  $values[$column] = sanitizeColumn(filter_input(INPUT_GET, $column));
 }
 
 // 範囲検索用
@@ -64,11 +51,13 @@ $messageForIncomeMax = '';
 $messageForIncomeCompare = '';
 $annualIncomeMin = '';
 $annualIncomeMax = '';
-// 演算子値を取得し格納。値が存在しない場合は空の文字列を格納
-// $annualIncomeMin、Maxに格納する前に、クッションとして変数に格納
-$dirtyAnnualIncomMin = $_GET['annual_income_min'] ?? ''; 
-$dirtyAnnualIncomMax = $_GET['annual_income_max'] ?? '';
-if (!empty($dirtyAnnualIncomMin) && !preg_match('/^[0-9]*$/', $dirtyAnnualIncomMin)) // !emptyは0を空と判定するので意図せぬ結果が生じる
+
+// 値を取得し格納。値が存在しない場合は空の文字列を格納
+// $annualIncomeMin、Maxに格納する前に、クッションとして別の変数に格納
+$dirtyAnnualIncomMin = filter_input(INPUT_GET, 'annual_income_min', FILTER_VALIDATE_INT) ?? '';
+$dirtyAnnualIncomMax = filter_input(INPUT_GET, 'annual_income_max', FILTER_VALIDATE_INT) ?? '';
+
+if (!empty($dirtyAnnualIncomMin) && !preg_match('/^[0-9]*$/', $dirtyAnnualIncomMin)) 
 {
   $messageForIncomeMin = '下限希望年収には、0以上の正の整数を入力してください。<例> 300';
 } 
@@ -114,7 +103,7 @@ if (!empty($conditions))
   $where = ' WHERE ' . implode(' AND ', $conditions);
 }
 
-// 検索結果次第でページ数を変更
+// 検索結果に応じてページ数を変更
 $sql = 'SELECT COUNT(*) AS entry_count FROM entries' . $where;
 
 $stmt = $pdo->prepare($sql);
@@ -138,25 +127,28 @@ if (!empty($annualIncomeMax))
 
 $stmt->execute();
 $total = $stmt->fetch(PDO::FETCH_ASSOC);
-$totalPages = ceil($total['entry_count'] / $perPage); // $totalPagesに、$total['entry_count']で全エントリー数を取得して、１ページあたりの表示件数で割って、ceilで切り上げた数字を格納
+$totalPages = ceil($total['entry_count'] / $perPage); // 全ページ数を、$total['entry_count']で全エントリー数を取得して、１ページあたりの表示件数で割って、ceilで切り上げた数字を$totalPages格納
 
 // 存在するページが入力された場合はそのページに遷移
-if(isset($_GET['page']) && preg_match('/^[1-9][0-9]*$/', $_GET['page']) && $_GET['page'] <= $totalPages) 
+$dangerCurrentPage = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT);
+if(preg_match('/^[1-9][0-9]*$/', $dangerCurrentPage) && $dangerCurrentPage <= $totalPages)
 {
-  $currentPage = (int)$_GET['page'];
+  $currentPage = $dangerCurrentPage;
 }
 
-$direction = 'asc'; 
-if(isset($_GET['direction']) && $_GET['direction'] === 'desc')
+$direction = 'asc';
+$dangerDirection = filter_input(INPUT_GET, 'direction');
+if($dangerDirection && $dangerDirection === 'desc')
 {
-  $direction = 'desc';
+  $direction = $dangerDirection;
 }
 
 // カラム名の配列をつくり、in_arrayで配列にカラム名があるかチェックして、ある場合はそのカラム名を$sortColumnに格納
-$sortColumn = 'id'; 
-if(isset($_GET['sort-column']) && in_array($_GET['sort-column'], $columns, true)) // 第三引数はtrueにして厳密に比較
+$sortColumn = 'id';
+$dangerSortColumn = filter_input(INPUT_GET, 'sort-column');
+if($dangerSortColumn && in_array($dangerSortColumn, $columns, true)) // 第三引数はtrueにして厳密に比較
 {
-  $sortColumn = $_GET['sort-column'];
+  $sortColumn = $dangerSortColumn;
 }
 
 $offset = $perPage * ($currentPage - 1);
@@ -197,13 +189,13 @@ foreach ($values as $column => $value)
   {
     continue; // emptyなら処理を終わらせて次に進む
   }
-  // emptyでなければ、次の処理をする
+  // emptyでなければ、変数に$valueを格納
   $parametersForSort[$column] = $value;
   $parametersForPagination[$column] = $value;
 }
 
 // URLパラメータ削除用
-$baseUrl = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$baseUrl = parse_url(filter_input(INPUT_SERVER, 'REQUEST_URI'), PHP_URL_PATH);
 ?>
 
 <!DOCTYPE html>
@@ -263,14 +255,14 @@ $baseUrl = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
       <tbody>
       <?php foreach ($entries as $entry): ?>
           <tr>
-            <td><?php echo $entry['id']; ?></td>
-            <td><?php echo $entry['name']; ?></td>
-            <td><?php echo $entry['email']; ?></td>
-            <td><?php echo $entry['gender']; ?></td>
-            <td><?php echo $entry['position']; ?></td>
-            <td><?php echo $entry['work']; ?></td>
+            <td><?php echo htmlspecialchars($entry['id']); ?></td>
+            <td><?php echo htmlspecialchars($entry['name']); ?></td>
+            <td><?php echo htmlspecialchars($entry['email']); ?></td>
+            <td><?php echo htmlspecialchars($entry['gender']); ?></td>
+            <td><?php echo htmlspecialchars($entry['position']); ?></td>
+            <td><?php echo htmlspecialchars($entry['work']); ?></td>
             <td><?php echo htmlspecialchars($entry['question'], ENT_QUOTES, 'UTF-8'); ?></td>
-            <td><?php echo $entry['annual_income'] . '万円'; ?></td>
+            <td><?php echo htmlspecialchars($entry['annual_income']) . '万円'; ?></td>
           </tr>
       <?php endforeach; ?>
       </tbody>
@@ -285,7 +277,7 @@ $baseUrl = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
           </li>
           <?php endif; ?>
           <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-          <li class="page-item <?php if ($currentPage === $i) {echo 'disabled';} ?>"> <!-- 開いているページのみclass="disabled"にしてクリック不能化 -->
+          <li class="page-item <?php if ($currentPage === $i) {echo 'disabled';} ?>"> <!-- 開いているページはクリック不能化 -->
             <a class="page-link <?php if ($currentPage === $i) {echo 'active';} ?>" href="entries.php?<?php echo http_build_query($parametersForPagination); ?>&page=<?php echo $i; ?>">
             <?php echo $i; ?>
             </a>
@@ -317,7 +309,7 @@ $baseUrl = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
           </div>
 
           <!-- 昇順降順のソート -->
-          <div hidden class="row justify-content-center">  <!-- hiddenでdiv内の要素を隠す -->
+          <div hidden class="row justify-content-center">
             <div class="col-lg-2 mb-2">
               <label for="昇順降順" class="form-label"></label>
               <select class="form-select" name="sort-column" id="昇順降順">
@@ -337,15 +329,15 @@ $baseUrl = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
           <!-- 検索フォーム -->
           <div class="row justify-content-center">
             <div class="col-lg-2 text-center">
-              <input type="text" class="my-2 form-control" name="id" placeholder="id" value="<?php if (!empty($values)) {echo htmlspecialchars($values['id']);}?>">
-              <input type="text" class="my-2 form-control" name="name" placeholder="名前" value="<?php if (!empty($values)) {echo htmlspecialchars($values['name']);}?>">
-              <input type="text" class="my-2 form-control" name="email" placeholder="メールアドレス" value="<?php if (!empty($values)) {echo htmlspecialchars($values['email']);}?>">
-              <input type="text" class="my-2 form-control" name="gender" placeholder="性別" value="<?php if (!empty($values)) {echo htmlspecialchars($values['gender']);}?>"> 
-              <input type="text" class="my-2 form-control" name="position" placeholder="希望ポジション" value="<?php if (!empty($values)) {echo htmlspecialchars($values['position']);}?>">
-              <input type="text" class="my-2 form-control" name="work" placeholder="前職" value="<?php if (!empty($values)) {echo htmlspecialchars($values['work']);}?>"> 
-              <input type="text" class="my-2 form-control" name="question" placeholder="質問" value="<?php if (!empty($values)) {echo htmlspecialchars($values['question']);}?>">
-              <input type="number" class="my-2 form-control" name="annual_income_min" placeholder="下限希望年収（万円）" value="<?php if (isset($_GET['annual_income_min'])) {echo htmlspecialchars($_GET['annual_income_min']);}?>">
-              <input type="number" class="my-2 form-control" name="annual_income_max" placeholder="上限希望年収（万円）" value="<?php if (isset($_GET['annual_income_max'])) {echo htmlspecialchars($_GET['annual_income_max']);}?>">
+              <input type="text" class="my-2 form-control" name="id" placeholder="id" value="<?php if (!empty($values['id'])) {echo htmlspecialchars($values['id']);}?>">
+              <input type="text" class="my-2 form-control" name="name" placeholder="名前" value="<?php if (!empty($values['name'])) {echo htmlspecialchars($values['name']);}?>">
+              <input type="text" class="my-2 form-control" name="email" placeholder="メールアドレス" value="<?php if (!empty($values['email'])) {echo htmlspecialchars($values['email']);}?>">
+              <input type="text" class="my-2 form-control" name="gender" placeholder="性別" value="<?php if (!empty($values['gender'])) {echo htmlspecialchars($values['gender']);}?>"> 
+              <input type="text" class="my-2 form-control" name="position" placeholder="希望ポジション" value="<?php if (!empty($values['position'])) {echo htmlspecialchars($values['position']);}?>">
+              <input type="text" class="my-2 form-control" name="work" placeholder="前職" value="<?php if (!empty($values['work'])) {echo htmlspecialchars($values['work']);}?>"> 
+              <input type="text" class="my-2 form-control" name="question" placeholder="質問" value="<?php if (!empty($values['question'])) {echo htmlspecialchars($values['question']);}?>">
+              <input type="text" class="my-2 form-control" name="annual_income_min" placeholder="下限希望年収（万円）" value="<?php echo htmlspecialchars(filter_input(INPUT_GET, 'annual_income_min'));?>">
+              <input type="text" class="my-2 form-control" name="annual_income_max" placeholder="上限希望年収（万円）" value="<?php echo htmlspecialchars(filter_input(INPUT_GET, 'annual_income_max'));?>">
               <input class="my-2 form-control" type="submit">
             </div>
           </div>
