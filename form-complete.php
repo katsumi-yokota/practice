@@ -1,29 +1,34 @@
 <?php
-try {
+session_start();
+try 
+{
   $dsn = 'mysql:dbname=form-db;host=localhost;charset=utf8';
   $user = 'yamadasan';
   $password = '1q2w3e4r5t';
  
-  $PDO = new PDO($dsn, $user, $password); //データベースに接続
+  $PDO = new PDO($dsn, $user, $password);
   $PDO->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); //PDOのエラーレポートを表示
  
-  //AI（オートインクリメント）を設定しているのでidは書かない
-  $name = htmlspecialchars(filter_input(INPUT_POST, 'name'));
-  $email = htmlspecialchars(filter_input(INPUT_POST, 'email'));
-  $gender = htmlspecialchars(filter_input(INPUT_POST, 'gender'));
-  $position = htmlspecialchars(filter_input(INPUT_POST, 'position'));
-  $work = htmlspecialchars(filter_input(INPUT_POST, 'work'));
-  $question = htmlspecialchars(filter_input(INPUT_POST, 'question'));
-  $annual_income = htmlspecialchars(filter_input(INPUT_POST, 'annual_income'));
- 
+  $name = $_SESSION['name'];
+  $email = $_SESSION['email'];
+  $gender = $_SESSION['gender'];
+  $positions = implode('、', $_SESSION['positions']); //配列の要素値を「、」区切りで文字列に変換
+  $work = $_SESSION['work'];
+  $question = $_SESSION['question'];
+  $annualIncome = $_SESSION['annual_income'];
+
+  //form.phpでチェックしてあるので$sqlに格納
   $sql = "INSERT INTO entries (name, email, gender, position, work, question, annual_income) VALUES (:name, :email, :gender, :position, :work, :question, :annual_income)";
   $stmt = $PDO->prepare($sql);
-  $params = array(':name' => $name, ':email' => $email, ':gender' => $gender, ':position' => $position, ':work' => $work, 'question' => $question, 'annual_income' => $annual_income); // 簡易的にバインド
+  $params = array(':name' => $name, ':email' => $email, ':gender' => $gender, ':position' => $positions, ':work' => $work, ':question' => $question, ':annual_income' => $annualIncome); // 簡易的にバインド
+  
   $stmt->execute($params);
  
-} catch (PDOException $e) {
-  exit('エントリーは完了していません！' . $e->getMessage());
-}
+} 
+  catch (PDOException $e) 
+  {
+    exit('エントリーは完了していません！' . $e->getMessage());
+  }
 ?>
 
 <!DOCTYPE html>
@@ -54,29 +59,30 @@ try {
         エントリー完了
       </h2>
 
+      <p class="text-center fw-bold my-3">
+        <?php echo htmlspecialchars($name). ' 様'; ?>
+      </p>
+
       <p class="text-center my-3">
-        この度はShimoningへの求人採用にエントリーしていただき、誠にありがとうございます。<br>
+        この度は、Shimoningへの求人採用にエントリーしていただき、誠にありがとうございます。<br>
         担当者よりご連絡をさせていただきますので、今しばらくお待ちくださいますよう、よろしくお願い申し上げます。
       </p>
 
-      <p class="text-center">
-        なお、エントリー内容につきましては、下記の通りです。
+      <p class="text-center small">
+        ※エントリー内容につきましては、下記の通りです。
       </p>
 
       <ul class="list-group list-group-flush border border-success">
-        <li class="list-group-item"><?php echo 'お名前: ' . $name . '様'; ?></li>
-        <li class="list-group-item"><?php echo 'メールアドレス: ' . $email; ?></li>
-        <li class="list-group-item"><?php echo '性別: ' . $gender; ?></li>
-        <li class="list-group-item"><?php echo 'ポジション: ' . $position; ?></li>
-        <li class="list-group-item"><?php echo '前職: ' . $work; ?></li>
-        <li class="list-group-item"><?php echo '質問: ' . $question; ?></li>
-        <li class="list-group-item"><?php echo '希望年収: ' . $annual_income . '万円'; ?></li>
+        <li class="list-group-item"><?php echo 'お名前: ' . htmlspecialchars($name) . ' 様'; ?></li>
+        <li class="list-group-item"><?php echo 'メールアドレス: ' . htmlspecialchars($email); ?></li>
+        <li class="list-group-item"><?php echo '性別: ' . htmlspecialchars($gender); ?></li>
+        <li class="list-group-item"><?php echo 'ご希望のポジション: ' . htmlspecialchars($positions); ?></li>
+        <li class="list-group-item"><?php echo '前職: ' . htmlspecialchars($work); ?></li>
+        <li class="list-group-item"><?php echo 'ご質問: ' . htmlspecialchars($question); ?></li>
+        <li class="list-group-item"><?php echo 'ご希望の年収: ' . htmlspecialchars($annualIncome) . ' 万円'; ?></li>
       </ul>
     </main>
 
-    <!-- <footer class="fixed-bottom text-center small">
-      <p>&copy; 2023 Shimoning</p>
-    </footer> -->
   </div>
 </body>
 </html>
