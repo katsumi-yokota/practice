@@ -1,34 +1,113 @@
 <?php
 session_start();
-try 
-{
-  $dsn = 'mysql:dbname=form-db;host=localhost;charset=utf8';
-  $user = 'yamadasan';
-  $password = '1q2w3e4r5t';
- 
-  $PDO = new PDO($dsn, $user, $password);
-  $PDO->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); //PDOのエラーレポートを表示
- 
-  $name = $_SESSION['name'];
-  $email = $_SESSION['email'];
-  $gender = $_SESSION['gender'];
-  $positions = implode('、', $_SESSION['positions']); //配列の要素値を「、」区切りで文字列に変換
-  $work = $_SESSION['work'];
-  $question = $_SESSION['question'];
-  $annualIncome = $_SESSION['annual_income'];
+$_SESSION = array();
 
-  //form.phpでチェックしてあるので$sqlに格納
-  $sql = "INSERT INTO entries (name, email, gender, position, work, question, annual_income) VALUES (:name, :email, :gender, :position, :work, :question, :annual_income)";
-  $stmt = $PDO->prepare($sql);
-  $params = array(':name' => $name, ':email' => $email, ':gender' => $gender, ':position' => $positions, ':work' => $work, ':question' => $question, ':annual_income' => $annualIncome); // 簡易的にバインド
+//バリデーション
+//必須
+$name = '';
+$email = '';
+$positions = '';
+$dangerName = filter_input(INPUT_POST, 'name');
+$dangerEmail = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
+$dangerPositions = filter_input(INPUT_POST, 'positions', FILTER_DEFAULT, ['flags' => FILTER_REQUIRE_ARRAY]) ?? [];
+
+// 保存用
+if (isset($dangerName) && !empty($dangerName) && mb_strlen($dangerName) <= 40)
+{
+  $name = $dangerName;
+  $_SESSION['name'] = $dangerName;
+}
+else
+{
+  $_SESSION['messageForName'] = '正しいお名前を入力してください';
+}
+// 全体の否定のテスト
+// if !(isset($dangerName) && !empty($dangerName) && mb_strlen($dangerName) <= 40)
+// {
+//   $_SESSION['messageForName'] = '正しいお名前を入力してください';
+// }
+if (isset($dangerEmail) && !empty($dangerEmail) && mb_strlen($dangerEmail) <= 254)
+{
+  $email = $dangerEmail;
+  $_SESSION['email'] = $dangerEmail;
+}
+else
+{
+  $_SESSION['messageForEmail'] = '正しいメールアドレスを入力してください';
+}
+if (filter_input(INPUT_SERVER, 'REQUEST_METHOD') === 'POST' && empty($dangerPositions)) //フォームが送信されたときのみ処理
+{
+  $_SESSION['messageForPositions'] = 'ご希望のポジションを入力してください';
+}
+// 保存用
+if (in_array('SE', $dangerPositions) || in_array('プログラマー', $dangerPositions) || in_array('インフラエンジニア', $dangerPositions)) //要修正
+{
+  $positions = implode(', ',$dangerPositions);
+  $_SESSION['positions'] = $dangerPositions;
+}
+
+//非必須
+$gender = '';
+$work = '';
+$question = '';
+$annualIncome = '';
+$dangerGender = filter_input(INPUT_POST, 'gender');
+$dangerWork = filter_input(INPUT_POST, 'work');
+$dangerQuestion = filter_input(INPUT_POST, 'question');
+$dangerAnnualIncome = filter_input(INPUT_POST, 'annual_income');
+if (preg_match('/^(男性|女性|その他|未回答)$/', $dangerGender)) 
+{
+     $gender = $dangerGender;
+     $_SESSION['gender'] = $dangerGender;
+}
+if (mb_strlen($dangerWork) <= 40)
+{
+     $work = $dangerWork;
+     $_SESSION['work'] = $dangerWork;
+}
+if (mb_strlen($dangerQuestion) <= 100)
+{
+     $question = $dangerQuestion;
+     $_SESSION['question'] = $dangerQuestion;
+}
+if (preg_match('/^[0-9]+$/', $dangerAnnualIncome))
+{
+     $annualIncome = $dangerAnnualIncome;
+     $_SESSION['annual_income'] = $dangerAnnualIncome;
+}
+
+if (empty($_SESSION['messageForName']) && empty($_SESSION['messageForEmail']) && empty($_SESSION['messageForPositions']))
+{
+  try 
+  {
+    $dsn = 'mysql:dbname=form-db;host=localhost;charset=utf8';
+    $user = 'yamadasan';
+    $password = '1q2w3e4r5t';
   
-  $stmt->execute($params);
- 
-} 
+    $PDO = new PDO($dsn, $user, $password);
+    $PDO->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); //PDOのエラーレポートを表示
+
+    //$sqlに格納
+    $sql = "INSERT INTO entries (name, email, gender, position, work, question, annual_income) VALUES (:name, :email, :gender, :position, :work, :question, :annual_income)";
+    $stmt = $PDO->prepare($sql);
+    $params = array(':name' => $name, ':email' => $email, ':gender' => $gender, ':position' => $positions, ':work' => $work, ':question' => $question, ':annual_income' => $annualIncome); // 簡易的にバインド
+    
+    $stmt->execute($params);
+  
+  } 
   catch (PDOException $e) 
   {
     exit('エントリーは完了していません！' . $e->getMessage());
   }
+  
+}
+else
+{
+  // header("Location: form.php", true, 400); // 保存用
+  header("Location: form.php");
+  exit();
+}
+// $_SESSION = array();
 ?>
 
 <!DOCTYPE html>
