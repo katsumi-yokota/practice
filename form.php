@@ -2,14 +2,8 @@
 //セッション
 session_start();
 
-//バリデーション用
-$dangerName = filter_input(INPUT_POST, 'name');
-$dangerEmail = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
-$dangerPositions = filter_input(INPUT_POST, 'positions', FILTER_DEFAULT, ['flags' => FILTER_REQUIRE_ARRAY]) ?? [];
-$dangerGender = filter_input(INPUT_POST, 'gender');
-$dangerWork = filter_input(INPUT_POST, 'work');
-$dangerQuestion = filter_input(INPUT_POST, 'question');
-$dangerAnnualIncome = filter_input(INPUT_POST, 'annual_income');
+//トークンの生成
+$_SESSION['token'] = uniqid();
 ?>
 
 <!DOCTYPE html>
@@ -25,18 +19,18 @@ $dangerAnnualIncome = filter_input(INPUT_POST, 'annual_income');
 
           <!-- エラーメッセージ -->
           <?php if (!empty($_SESSION['messageForName'])):?>
-          <p class="alert alert-warning"><?php echo $_SESSION['messageForName']; ?></p>
+          <p class="alert alert-warning"><?php echo htmlspecialchars($_SESSION['messageForName']); ?></p>
           <?php endif; ?>
           <?php if (!empty($_SESSION['messageForEmail'])):?>
-          <p class="alert alert-warning"><?php echo $_SESSION['messageForEmail']; ?></p>
+          <p class="alert alert-warning"><?php echo htmlspecialchars($_SESSION['messageForEmail']); ?></p>
           <?php endif; ?>
           <?php if (!empty($_SESSION['messageForPositions'])):?>
-          <p class="alert alert-warning"><?php echo $_SESSION['messageForPositions']; ?></p>
+          <p class="alert alert-warning"><?php echo htmlspecialchars($_SESSION['messageForPositions']); ?></p>
           <?php endif; ?>
 
           <form method="post" action="form-complete.php">
                <label class="py-4" for="name">お名前<span class="text-danger"> ※</span></label>
-               <input type="text" name="name" id="name" placeholder="田中太郎" class="form-control" value="<?php if (isset($_SESSION['name'])){ echo htmlspecialchars($_SESSION['name']);} ?>">
+               <input type="text" name="name" id="name" placeholder="田中太郎" class="form-control" value="<?php if (isset($_SESSION['name'])) {echo htmlspecialchars($_SESSION['name']);} ?>">
                <label class="py-4" for="email">メールアドレス<span class="text-danger"> ※</span></label>
                <input type="text" name="email" id="email" maxlength="254" placeholder="shimoning@gmail.com" class="form-control" value="<?php if (isset($_SESSION['email'])) {echo htmlspecialchars($_SESSION['email']);} ?>">
                <label class="py-4" for="gender">性別</label>
@@ -74,6 +68,7 @@ $dangerAnnualIncome = filter_input(INPUT_POST, 'annual_income');
                <textarea class="form-control" name="question" id="question" cols="50" rows="5" placeholder="Shimoningの名前の由来は？"><?php if (isset($_SESSION['question'])){echo htmlspecialchars($_SESSION['question']);} ?></textarea>
                <label class="py-4" for="annual_income">ご希望の年収（単位:万円）</label>
                <input type="text" name="annual_income" pattern="^[1-9][0-9]*$" id="annual_income" placeholder="100" class="form-control" value="<?php if (isset($_SESSION['annual_income'])){echo htmlspecialchars($_SESSION['annual_income']);} ?>">
+               <input type="hidden" name="token" value="<?php if (isset($_SESSION['token'])) {echo $_SESSION['token'];} ?>">
                <input type="submit" name="submit" value="エントリーする" class="btn btn-success px-5 my-4">
           </form>
      </div>
