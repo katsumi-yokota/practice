@@ -1,31 +1,34 @@
 <?php
 session_start();
-$_SESSION = array();
+
+//トークン
+$token = '';
+if (isset($_SESSION['token']))
+{
+  $token = $_SESSION['token'];
+}
+
+$isTokenCorrect = filter_input(INPUT_POST, 'token') === $token;
 
 //バリデーション
 //必須
 $name = '';
 $email = '';
-$positions = '';
+$positions = [];
 $dangerName = filter_input(INPUT_POST, 'name');
 $dangerEmail = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
 $dangerPositions = filter_input(INPUT_POST, 'positions', FILTER_DEFAULT, ['flags' => FILTER_REQUIRE_ARRAY]) ?? [];
 
-// 保存用
+$_SESSION = array();
+
 if (isset($dangerName) && !empty($dangerName) && mb_strlen($dangerName) <= 40)
 {
   $name = $dangerName;
-  $_SESSION['name'] = $dangerName;
 }
 else
 {
   $_SESSION['messageForName'] = '正しいお名前を入力してください';
 }
-// 全体の否定のテスト
-// if !(isset($dangerName) && !empty($dangerName) && mb_strlen($dangerName) <= 40)
-// {
-//   $_SESSION['messageForName'] = '正しいお名前を入力してください';
-// }
 if (isset($dangerEmail) && !empty($dangerEmail) && mb_strlen($dangerEmail) <= 254)
 {
   $email = $dangerEmail;
@@ -39,12 +42,19 @@ if (filter_input(INPUT_SERVER, 'REQUEST_METHOD') === 'POST' && empty($dangerPosi
 {
   $_SESSION['messageForPositions'] = 'ご希望のポジションを入力してください';
 }
-// 保存用
-if (in_array('SE', $dangerPositions) || in_array('プログラマー', $dangerPositions) || in_array('インフラエンジニア', $dangerPositions)) //要修正
+foreach ($dangerPositions as $dangerPosition)
 {
-  $positions = implode(', ',$dangerPositions);
-  $_SESSION['positions'] = $dangerPositions;
+  if (preg_match('/^(SE|プログラマー|インフラエンジニア)$/', $dangerPosition) && substr_count(implode($dangerPositions), $dangerPosition) <= 1)
+  {
+    $positions[] = $dangerPosition;
+  }
+  else
+  {
+    $_SESSION['messageForPositions'] = '正しいポジションを入力してください';
+  }
 }
+
+$_SESSION['positions'] = $positions;
 
 //非必須
 $gender = '';
@@ -58,25 +68,31 @@ $dangerAnnualIncome = filter_input(INPUT_POST, 'annual_income');
 if (preg_match('/^(男性|女性|その他|未回答)$/', $dangerGender)) 
 {
      $gender = $dangerGender;
-     $_SESSION['gender'] = $dangerGender;
 }
 if (mb_strlen($dangerWork) <= 40)
 {
      $work = $dangerWork;
-     $_SESSION['work'] = $dangerWork;
 }
 if (mb_strlen($dangerQuestion) <= 100)
 {
      $question = $dangerQuestion;
-     $_SESSION['question'] = $dangerQuestion;
 }
 if (preg_match('/^[0-9]+$/', $dangerAnnualIncome))
 {
      $annualIncome = $dangerAnnualIncome;
-     $_SESSION['annual_income'] = $dangerAnnualIncome;
 }
 
-if (empty($_SESSION['messageForName']) && empty($_SESSION['messageForEmail']) && empty($_SESSION['messageForPositions']))
+//フォーム画面に表示用
+$_SESSION['name'] = $dangerName;
+$_SESSION['email'] = filter_input(INPUT_POST, 'email');
+$_SESSION['gender'] = $dangerGender;
+$_SESSION['positions'] = $dangerPositions;
+$_SESSION['work'] = $dangerWork;
+$_SESSION['question'] = $dangerQuestion;
+$_SESSION['annual_income'] = $dangerAnnualIncome;
+
+$hasErrors = !empty($_SESSION['messageForName']) || !empty($_SESSION['messageForEmail']) || !empty($_SESSION['messageForPositions']);
+if ($isTokenCorrect && !$hasErrors)
 {
   try 
   {
@@ -90,24 +106,20 @@ if (empty($_SESSION['messageForName']) && empty($_SESSION['messageForEmail']) &&
     //$sqlに格納
     $sql = "INSERT INTO entries (name, email, gender, position, work, question, annual_income) VALUES (:name, :email, :gender, :position, :work, :question, :annual_income)";
     $stmt = $PDO->prepare($sql);
-    $params = array(':name' => $name, ':email' => $email, ':gender' => $gender, ':position' => $positions, ':work' => $work, ':question' => $question, ':annual_income' => $annualIncome); // 簡易的にバインド
-    
+    $params = array(':name' => $name, ':email' => $email, ':gender' => $gender, ':position' => implode(',', $positions), ':work' => $work, ':question' => $question, ':annual_income' => $annualIncome); // 簡易的にバインド
+
     $stmt->execute($params);
-  
   } 
   catch (PDOException $e) 
   {
     exit('エントリーは完了していません！' . $e->getMessage());
   }
-  
 }
-else
+if ($hasErrors)
 {
-  // header("Location: form.php", true, 400); // 保存用
-  header("Location: form.php");
+  header('Location: form.php');
   exit();
 }
-// $_SESSION = array();
 ?>
 
 <!DOCTYPE html>
@@ -155,7 +167,7 @@ else
         <li class="list-group-item"><?php echo 'お名前: ' . htmlspecialchars($name) . ' 様'; ?></li>
         <li class="list-group-item"><?php echo 'メールアドレス: ' . htmlspecialchars($email); ?></li>
         <li class="list-group-item"><?php echo '性別: ' . htmlspecialchars($gender); ?></li>
-        <li class="list-group-item"><?php echo 'ご希望のポジション: ' . htmlspecialchars($positions); ?></li>
+        <li class="list-group-item"><?php echo 'ご希望のポジション: ' . htmlspecialchars(implode(',', $positions)); ?></li>
         <li class="list-group-item"><?php echo '前職: ' . htmlspecialchars($work); ?></li>
         <li class="list-group-item"><?php echo 'ご質問: ' . htmlspecialchars($question); ?></li>
         <li class="list-group-item"><?php echo 'ご希望の年収: ' . htmlspecialchars($annualIncome) . ' 万円'; ?></li>
