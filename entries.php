@@ -1,9 +1,13 @@
 <?php
 session_start();
-if (isset($_SESSION['username']))
+
+if (!isset($_SESSION['username']))
 {
-  echo 'ようこそ ' . $_SESSION['username'] . ' さん' . '<br>';
-  echo '<a href="logout.php" class="btn-info">ログアウト</a>';
+  return;
+}
+else
+{
+  $welcomeMessage = 'ようこそ ';
 
   $pdo = new PDO('mysql:dbname=form-db;host=localhost;charset=utf8', 'yamadasan', '1q2w3e4r5t');
 
@@ -111,7 +115,6 @@ if (isset($_SESSION['username']))
 
   // 検索結果に応じてページ数を変更
   $sql = 'SELECT COUNT(*) AS entry_count FROM entries' . $where;
-
   $stmt = $pdo->prepare($sql);
 
   foreach ($values as $key => $value)
@@ -152,7 +155,7 @@ if (isset($_SESSION['username']))
   // カラム名の配列をつくり、in_arrayで配列にカラム名があるかチェックして、ある場合はそのカラム名を$sortColumnに格納
   $sortColumn = 'id';
   $dangerSortColumn = filter_input(INPUT_GET, 'sort-column');
-  if($dangerSortColumn && in_array($dangerSortColumn, $columns, true)) // 第三引数はtrueにして厳密に比較
+  if($dangerSortColumn && in_array($dangerSortColumn, $columns, true)) // 第三引数はtrueで厳密に比較
   {
     $sortColumn = $dangerSortColumn;
   }
@@ -215,6 +218,12 @@ if (isset($_SESSION['username']))
 
     <body>
       <header>
+        <!-- ログイン、ログアウト -->
+        <?php if (!empty($welcomeMessage)): ?> 
+        <p><?php echo $welcomeMessage . $_SESSION['username'] . ' 様'; ?></p>
+        <a href="logout.php" class="btn btn-success">ログアウト</a>
+        <?php endif; ?>
+
         <h1 class="text-center">エントリー一覧</h1>
 
         <!-- URLパラメータ削除ボタン -->
@@ -272,89 +281,105 @@ if (isset($_SESSION['username']))
         <?php endforeach; ?>
         </tbody>
       </table>
-        <!-- ページネーション -->
-        <nav aria-label="Page navigation" class="my-5">
-          <ul class="pagination pagination-lg justify-content-center">
-            <?php if($currentPage > 1): ?>
-            <li class="page-item">
-              <a class="page-link" href="entries.php?<?php echo http_build_query($parametersForPagination); ?>&page=<?php echo $currentPage - 1; ?>">前へ
-              </a>
-            </li>
-            <?php endif; ?>
-            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-            <li class="page-item <?php if ($currentPage === $i) {echo 'disabled';} ?>"> <!-- 開いているページはクリック不能化 -->
-              <a class="page-link <?php if ($currentPage === $i) {echo 'active';} ?>" href="entries.php?<?php echo http_build_query($parametersForPagination); ?>&page=<?php echo $i; ?>">
-              <?php echo $i; ?>
-              </a>
-            </li>
-            <?php endfor; ?>
-            <?php if($currentPage < $totalPages): ?>
-            <li class="page-item">
-              <a class="page-link" href="entries.php?<?php echo http_build_query($parametersForPagination); ?>&page=<?php echo $currentPage + 1; ?>">次へ
-              </a>
-            </li>
-            <?php endif; ?>
-          </ul>
-        </nav>
 
-        <form action="" method="GET">
-          <div class="container">
-            <div class="row justify-content-center">
-              <div class="col-lg-2 mb-2">
-                <label for="表示件数" class="form-label">表示件数:</label>
-                <select class="form-select" name="limit" id="表示件数">
-                  <!-- selectedを使って指定した件数を固定 -->
-                  <option value="5" <?php if ($perPage === 5): ?>selected<?php endif; ?>>5件</option>
-                  <option value="10" <?php if ($perPage === 10): ?>selected<?php endif; ?>>10件</option>
-                  <option value="15" <?php if ($perPage === 15): ?>selected<?php endif; ?>>15件</option>
-                  <option value="20" <?php if ($perPage === 20): ?>selected<?php endif; ?>>20件</option>
-                </select>
-                <input type="hidden" name="page" value="<?php if(isset($currentPage)) {echo $currentPage;} ?>"> 
-              </div>
-            </div>
+      <!-- ページネーション -->
+      <nav aria-label="Page navigation" class="my-5">
+        <ul class="pagination pagination-lg justify-content-center">
+          <li class="page-item <?php if($currentPage === 1){echo 'disabled';} ?>">
+            <a class="page-link <?php if($currentPage === 1){echo 'text-secondary active';} ?>" href="entries.php?<?php echo http_build_query($parametersForPagination); ?>&page=<?php echo $currentPage - 1; ?>">
+              ← Previous
+            </a>
+          </li>
+          <?php if($currentPage !== 1 && $currentPage !== 2): ?>
+          <li class="page-item">
+            <a class="page-link" href="entries.php?<?php echo http_build_query($parametersForPagination); ?>&page=1">
+              1
+            </a>
+          </li>
+          <?php endif; ?>
+          <?php if ($currentPage > 3): ?>
+          <li class="page-item disabled">
+            <a class="page-link" href="">...</a>
+          </li>
+          <?php endif; ?>
+          <?php for ($i = max($currentPage - 1, 1); $i <= min($currentPage + 1, $totalPages); $i++): ?>
+          <li class="page-item <?php if ($currentPage === $i) {echo 'disabled  border border-dark';} ?>">
+            <a class="page-link <?php if ($currentPage === $i) {echo 'active border border-dark text-dark fw-bold';} ?>" href="entries.php?<?php echo http_build_query($parametersForPagination); ?>&page=<?php echo $i; ?>">
+            <?php echo $i; ?>
+            </a>
+          </li>
+          <?php endfor; ?>
+          <?php if ($currentPage < $totalPages - 2): ?>
+          <li class="page-item disabled">
+            <a class="page-link" href="">...</a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="entries.php?<?php echo http_build_query($parametersForPagination); ?>&page=<?php echo $totalPages; ?>">
+            <?php echo $totalPages; ?>
+            </a>
+          </li>
+          <?php endif; ?>
+          <li class="page-item <?php if($currentPage === (int)$totalPages){echo 'disabled';} ?>">
+            <a class="page-link <?php if($currentPage === (int)$totalPages){echo 'text-secondary active';} ?>" href="entries.php?<?php echo http_build_query($parametersForPagination); ?>&page=<?php echo $currentPage + 1; ?>">
+              Next →
+            </a>
+          </li>
+        </ul>
+      </nav>
 
-            <!-- 昇順降順のソート -->
-            <div hidden class="row justify-content-center">
-              <div class="col-lg-2 mb-2">
-                <label for="昇順降順" class="form-label"></label>
-                <select class="form-select" name="sort-column" id="昇順降順">
-                  <option value="id" <?php if ($sortColumn === 'id'): ?>selected<?php endif; ?>>id</option>
-                  <option value="name" <?php if ($sortColumn === 'name'): ?>selected<?php endif; ?>>名前</option>
-                  <option value="email" <?php if ($sortColumn === 'email'): ?>selected<?php endif; ?>>メールアドレス</option>
-                  <option value="gender" <?php if ($sortColumn === 'gender'): ?>selected<?php endif; ?>>性別</option>
-                  <option value="position" <?php if ($sortColumn === 'position'): ?>selected<?php endif; ?>>希望のポジション</option>
-                  <option value="work" <?php if ($sortColumn === 'work'): ?>selected<?php endif; ?>>前職</option>
-                  <option value="question" <?php if ($sortColumn === 'question'): ?>selected<?php endif; ?>>質問</option>
-                </select>
-                <input type="radio" class="form-check-input" name="direction" value = "asc" <?php if(isset($direction) && $direction === 'asc') {echo 'checked';}?>>
-                <input type="radio" class="form-check-input" name="direction" value= "desc" <?php if(isset($direction) && $direction === 'desc') {echo 'checked';}?>>
-              </div>
+      <form action="" method="get">
+        <div class="container">
+          <!-- 表示件数 -->
+          <div class="row justify-content-center">
+            <div class="col-lg-2 mb-2">
+              <label for="表示件数" class="form-label">表示件数:</label>
+              <select class="form-select" name="limit" id="表示件数">
+                <option value="5" <?php if ($perPage === 5): ?>selected<?php endif; ?>>5件</option>
+                <option value="10" <?php if ($perPage === 10): ?>selected<?php endif; ?>>10件</option>
+                <option value="15" <?php if ($perPage === 15): ?>selected<?php endif; ?>>15件</option>
+                <option value="20" <?php if ($perPage === 20): ?>selected<?php endif; ?>>20件</option>
+              </select>
+              <input type="hidden" name="page" value="<?php if(isset($currentPage)) {echo $currentPage;} ?>"> 
             </div>
-              
-            <!-- 検索フォーム -->
-            <div class="row justify-content-center">
-              <div class="col-lg-2 text-center">
-                <input type="text" class="my-2 form-control" name="id" placeholder="id" value="<?php if (!empty($values['id'])) {echo htmlspecialchars($values['id']);}?>">
-                <input type="text" class="my-2 form-control" name="name" placeholder="名前" value="<?php if (!empty($values['name'])) {echo htmlspecialchars($values['name']);}?>">
-                <input type="text" class="my-2 form-control" name="email" placeholder="メールアドレス" value="<?php if (!empty($values['email'])) {echo htmlspecialchars($values['email']);}?>">
-                <input type="text" class="my-2 form-control" name="gender" placeholder="性別" value="<?php if (!empty($values['gender'])) {echo htmlspecialchars($values['gender']);}?>"> 
-                <input type="text" class="my-2 form-control" name="position" placeholder="希望ポジション" value="<?php if (!empty($values['position'])) {echo htmlspecialchars($values['position']);}?>">
-                <input type="text" class="my-2 form-control" name="work" placeholder="前職" value="<?php if (!empty($values['work'])) {echo htmlspecialchars($values['work']);}?>"> 
-                <input type="text" class="my-2 form-control" name="question" placeholder="質問" value="<?php if (!empty($values['question'])) {echo htmlspecialchars($values['question']);}?>">
-                <input type="text" class="my-2 form-control" name="annual_income_min" placeholder="下限希望年収（万円）" value="<?php echo htmlspecialchars(filter_input(INPUT_GET, 'annual_income_min'));?>">
-                <input type="text" class="my-2 form-control" name="annual_income_max" placeholder="上限希望年収（万円）" value="<?php echo htmlspecialchars(filter_input(INPUT_GET, 'annual_income_max'));?>">
-                <input class="my-2 form-control" type="submit">
-              </div>
-            </div>
-
           </div>
-        </form>
+
+          <!-- ソート -->
+          <div hidden class="row justify-content-center">
+            <div class="col-lg-2 mb-2">
+              <label for="昇順降順" class="form-label"></label>
+              <select class="form-select" name="sort-column" id="昇順降順">
+                <option value="id" <?php if ($sortColumn === 'id'): ?>selected<?php endif; ?>>id</option>
+                <option value="name" <?php if ($sortColumn === 'name'): ?>selected<?php endif; ?>>名前</option>
+                <option value="email" <?php if ($sortColumn === 'email'): ?>selected<?php endif; ?>>メールアドレス</option>
+                <option value="gender" <?php if ($sortColumn === 'gender'): ?>selected<?php endif; ?>>性別</option>
+                <option value="position" <?php if ($sortColumn === 'position'): ?>selected<?php endif; ?>>希望のポジション</option>
+                <option value="work" <?php if ($sortColumn === 'work'): ?>selected<?php endif; ?>>前職</option>
+                <option value="question" <?php if ($sortColumn === 'question'): ?>selected<?php endif; ?>>質問</option>
+              </select>
+              <input type="radio" class="form-check-input" name="direction" value = "asc" <?php if(isset($direction) && $direction === 'asc') {echo 'checked';}?>>
+              <input type="radio" class="form-check-input" name="direction" value= "desc" <?php if(isset($direction) && $direction === 'desc') {echo 'checked';}?>>
+            </div>
+          </div>
+            
+          <!-- 検索フォーム -->
+          <div class="row justify-content-center">
+            <div class="col-lg-2 text-center">
+              <input type="text" class="my-2 form-control" name="id" placeholder="id" value="<?php if (!empty($values['id'])) {echo htmlspecialchars($values['id']);}?>">
+              <input type="text" class="my-2 form-control" name="name" placeholder="名前" value="<?php if (!empty($values['name'])) {echo htmlspecialchars($values['name']);}?>">
+              <input type="text" class="my-2 form-control" name="email" placeholder="メールアドレス" value="<?php if (!empty($values['email'])) {echo htmlspecialchars($values['email']);}?>">
+              <input type="text" class="my-2 form-control" name="gender" placeholder="性別" value="<?php if (!empty($values['gender'])) {echo htmlspecialchars($values['gender']);}?>"> 
+              <input type="text" class="my-2 form-control" name="position" placeholder="希望ポジション" value="<?php if (!empty($values['position'])) {echo htmlspecialchars($values['position']);}?>">
+              <input type="text" class="my-2 form-control" name="work" placeholder="前職" value="<?php if (!empty($values['work'])) {echo htmlspecialchars($values['work']);}?>"> 
+              <input type="text" class="my-2 form-control" name="question" placeholder="質問" value="<?php if (!empty($values['question'])) {echo htmlspecialchars(nl2br($values['question']));}?>">
+              <input type="text" class="my-2 form-control" name="annual_income_min" placeholder="下限希望年収（万円）" value="<?php echo htmlspecialchars(filter_input(INPUT_GET, 'annual_income_min'));?>">
+              <input type="text" class="my-2 form-control" name="annual_income_max" placeholder="上限希望年収（万円）" value="<?php echo htmlspecialchars(filter_input(INPUT_GET, 'annual_income_max'));?>">
+              <input class="my-2 form-control" type="submit">
+            </div>
+          </div>
+
+        </div>
+      </form>
     </body>
   </html>
 <?php
-}
-else
-{
-  echo 'ログインしていません'. '<br>';
-  echo '<a href="login.php">ログイン</a>';
 }
