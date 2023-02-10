@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 // DBに接続
 $dbUser = 'yamadasan';
 $dbPass = '1q2w3e4r5t';
@@ -7,29 +9,39 @@ $pdo = new PDO($dsn, $dbUser, $dbPass);
 
 $username = filter_input(INPUT_POST, 'username');
 $password = filter_input(INPUT_POST, 'password');
-$stmt = $pdo->prepare('SELECT * FROM login WHERE username = :username AND password = :password');
-$stmt->bindValue(':username', $username, PDO::PARAM_STR);
-$stmt->bindValue(':password', $password, PDO::PARAM_STR);
-$stmt->execute();
 
-// ユーザー名とパスワードのチェック
-$result = $stmt->fetch(PDO::FETCH_ASSOC);
-if ($result !== false)
+// CSRF対策
+$token = filter_input(INPUT_POST, 'token');
+if (!isset($token) || $_SESSION['token'] !== $token) 
 {
-  session_start();
-  $_SESSION['username'] = $result['username'];
-
-  // header('Location: entries.php', true, 200);
-  header('Location: entries.php');
-  exit;
+  $errorMessage = '不正なリクエストはやめてください';
+  http_response_code(400);
 }
 else
 {
-  $errorMessage = '正しいユーザー名またはパスワードを入力してください';
-  // header('Location: login.php', true, 401);
-  // exit;
-}
+  $stmt = $pdo->prepare('SELECT * FROM login WHERE username = :username AND password = :password');
+  $stmt->bindValue(':username', $username, PDO::PARAM_STR);
+  $stmt->bindValue(':password', $password, PDO::PARAM_STR);
+  $stmt->execute();
 
+  // ユーザー名とパスワードのチェック
+  $result = $stmt->fetch(PDO::FETCH_ASSOC);
+  if ($result !== false)
+  {
+    $_SESSION['username'] = $result['username'];
+
+    http_response_code(200);
+    header('Location: entries.php');
+    exit;
+  }
+  else
+  {
+    $errorMessage = '正しいユーザー名またはパスワードを入力してください';
+    http_response_code(400);
+  }
+}
+// トークン生成
+$_SESSION['token'] = uniqid();
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -48,8 +60,8 @@ else
     <label for="username">ユーザー名</label>
     <input type="text" name="username" id="username" value="<?php echo htmlspecialchars($username); ?>">
     <label for="password">パスワード</label>
-    <input type="password" name="password" id="password" value="<?php echo htmlspecialchars($password); ?>">
-    <input type="hidden" name="token" value="<?php if (isset($_SESSION['token'])) {echo $_SESSION['token'];} ?>">
+    <input type="password" name="password" id="password" value="">
+    <input type="hidden" name="token" value="<?php if (isset($_SESSION['token'])) {echo htmlspecialchars($_SESSION['token']);} ?>">
     <input type="submit">
   </form>
 </body>
