@@ -5,13 +5,13 @@ $basicPass = 'passs';
 
 if(isset($_SERVER['PHP_AUTH_USER']) && ($_SERVER['PHP_AUTH_USER']==$basicUser && $_SERVER['PHP_AUTH_PW']==$basicPass))
 {
-  $authenticationMessage = ' さんがログイン中です';
+  $authenticationMessage = ' さんがログイン中です。';
 } 
 else
 {
   header('WWW-Authenticate: Basic realm="Basic"');
   header('HTTP/1.0 401 Unauthorized - basic');
-  $authenticationMessage = '認証されていません';
+  $authenticationMessage = '認証されていません。';
   exit();
 }
 
@@ -21,13 +21,12 @@ $dbUser = 'yamadasan';
 $dbPass = '1q2w3e4r5t';
 $pdo = new PDO($dsn, $dbUser, $dbPass);
 
+// 入力チェック
 $username = filter_input(INPUT_POST, 'username');
 $password = password_hash(filter_input(INPUT_POST, 'password'), PASSWORD_DEFAULT);
-
-// 入力チェック
 if (empty($username) || empty($password))
 {
-  $addUsersMessage = 'ユーザー名とパスワードを両方入力してください';
+  $addUsersMessage = 'ユーザー名とパスワードを両方入力してください。';
   http_response_code(400);
 }
 else
@@ -39,7 +38,7 @@ else
   $stmt->execute();
   if (count($stmt->fetchAll()) > 0)
   {
-    $addUsersMessage = 'ユーザー名が重複しています';
+    $addUsersMessage = 'ユーザー名が重複しています。別のユーザー名を入力してください。';
     http_response_code(400);
   }
   else
@@ -65,21 +64,25 @@ else
   <title>ユーザー追加</title>
 </head>
 <body>
-  <header>
-    <p><?php if (!empty($addUsersMessage)) {echo $addUsersMessage;} ?></p>
-    <p><?php echo htmlspecialchars($_SERVER['PHP_AUTH_USER']) . $authenticationMessage; ?></p>
-    <h1>ユーザーを追加する</h1>
-    <p><span class="fw-bold">ユーザー名</span>と<span class="fw-bold">パスワード</span>を入力してください</p>
-  </header>
+  <div class="container">
+    <header>
+      <p class="py-2"><?php echo htmlspecialchars($_SERVER['PHP_AUTH_USER']) . $authenticationMessage; ?></p>
+      <h1 class="text-center my-5">新規ユーザーを追加する</h1>
+      <?php if (filter_input(INPUT_SERVER, 'REQUEST_METHOD') === 'POST' && !empty($addUsersMessage)): ?>
+      <p class="alert alert-warning"><?php echo $addUsersMessage; ?></p>
+      <?php endif; ?>
+    </header>
 
-  <main>
-    <form action="" method="post">
-      <label for="">ユーザー名</label>
-      <input type="text" name="username" value="<?php echo htmlspecialchars($username); ?>">
-      <label for="">パスワード</label>
-      <input type="password" name="password">
-      <input type="submit">
-    </form>
-  </main>
+    <main>
+      <p class="text-center large">新規ユーザーを追加します。<span class="fw-bold">ユーザー名</span>と<span class="fw-bold">パスワード</span>を入力して「追加する」ボタンを押してください。</p>
+      <form action="" method="post">
+        <label for="username">ユーザー名</label>
+        <input type="text" class="form-control mb-2" name="username" id="username" value="<?php echo htmlspecialchars($username); ?>">
+        <label for="password">パスワード</label>
+        <input type="password" class="form-control mb-2" name="password" id="password">
+        <input type="submit" class="btn btn-success px-5 mt-2" value="追加する">
+      </form>
+    </main>
+  </div>
 </body>
 </html>
