@@ -1,6 +1,16 @@
 <?php
 session_start();
 
+// 自動ログアウト
+if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > 1800))
+{
+  $_SESSION = array();
+  http_response_code(200); // 要検討
+  header("Location: timeout.php");
+  exit;
+}
+$_SESSION['LAST_ACTIVITY'] = time(); // 最終アクティビティを記録
+
 if (!isset($_SESSION['username']))
 {
   return;
@@ -211,6 +221,7 @@ else
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- <meta http-equiv="refresh" content="1800;URL=login.php"> --> <!-- メタリフレッシュ -->
     <link rel="stylesheet" href="test-paging-style.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <title>エントリー一覧</title>
@@ -247,16 +258,16 @@ else
             <tr>
             <?php foreach ($columns as $column): ?>
               <th>
-                <!-- ソート機能の共通化 -->
-                <?php if ($column !== $sortColumn): ?> <!-- ワンクリック目は昇順にソート -->
+                <!-- ソート -->
+                <?php if ($column !== $sortColumn): ?> <!-- ワンクリック目は昇順 -->
                 <a href="entries.php?<?php echo http_build_query($parametersForSort); ?>&sort-column=<?php echo $column; ?>&direction=asc">
                 <?php echo $labels[$column]; ?>
                 </a>
-                <?php elseif ($direction === 'asc'): ?> <!-- 昇順の時は降順にソート-->
+                <?php elseif ($direction === 'asc'): ?> <!-- 昇順の時は降順-->
                 <a href="entries.php?<?php echo http_build_query($parametersForSort); ?>&sort-column=<?php echo $column; ?>&direction=desc">
                 <?php echo $labels[$column]; ?>↑
                 </a>
-                <?php else: ?> <!-- 降順の時（クリックされたカラムであり、かつ昇順でない時）は降順にソート -->
+                <?php else: ?> <!-- 降順の時（クリックされたカラムであり、かつ昇順でない時）は降順 -->
                 <a href="entries.php?<?php echo http_build_query($parametersForSort); ?>&sort-column=<?php echo $column; ?>&direction=asc">
                 <?php echo $labels[$column]; ?>↓
                 </a>
