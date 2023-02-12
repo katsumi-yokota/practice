@@ -34,7 +34,7 @@ $pdo = new PDO($dsn, $dbUser, $dbPass);
 
 // 入力チェック
 $username = filter_input(INPUT_POST, 'username');
-$password = password_hash(filter_input(INPUT_POST, 'password'), PASSWORD_DEFAULT);
+$password = filter_input(INPUT_POST, 'password');
 if (empty($username) || empty($password))
 {
   $addUsersMessage = 'ユーザー名とパスワードを両方入力してください。';
@@ -52,15 +52,19 @@ else
     $addUsersMessage = 'ユーザー名が重複しています。別のユーザー名を入力してください。';
     http_response_code(400);
   }
-  else
+  elseif (mb_strlen($username) >= 8 && mb_strlen($username) <= 16 && preg_match('/^[a-zA-Z0-9]*$/', $username) &&mb_strlen($password) >= 8 && mb_strlen($password) <= 16 && preg_match('/^[a-zA-Z0-9]*$/', $password) && $username !== $password) // 8~16字の半角英数字かつ同一でない
   {
-    $addUsersMessage = 'ユーザー名とパスワードの追加に成功しました';
+    $addUsersMessage = 'ユーザー名とパスワードの追加に成功しました。';
     $sql = 'INSERT INTO login (username, password) VALUES (:username, :password)';
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':username', $username, PDO::PARAM_STR);
-    $stmt->bindValue(':password', $password, PDO::PARAM_STR);
+    $stmt->bindValue(':password', password_hash($password, PASSWORD_DEFAULT), PDO::PARAM_STR);
     $stmt->execute();
     http_response_code(201);
+  }
+  else
+  {
+    $addUsersMessage = 'ユーザー名およびパスワードは、8字以上16字以下の半角英数字で入力してください。また、ユーザー名とパスワードは同一のものにしないでください。';
   }
 }
 ?>
@@ -79,17 +83,19 @@ else
     <header>
       <p class="py-2"><?php echo htmlspecialchars($_SERVER['PHP_AUTH_USER']) . $authenticationMessage; ?></p>
       <h1 class="text-center my-5">新規ユーザーを追加する</h1>
+      <p class="text-center large">新規ユーザーを追加します。<span class="fw-bold">ユーザー名</span>と<span class="fw-bold">パスワード</span>を入力して「追加する」ボタンを押してください。</p>
+      <form action="" method="post">
       <?php if (filter_input(INPUT_SERVER, 'REQUEST_METHOD') === 'POST' && !empty($addUsersMessage)): ?>
-      <p class="alert alert-warning"><?php echo $addUsersMessage; ?></p>
+      <p class="alert alert-warning"><?php echo htmlspecialchars($addUsersMessage); ?></p>
       <?php endif; ?>
     </header>
 
     <main>
-      <p class="text-center large">新規ユーザーを追加します。<span class="fw-bold">ユーザー名</span>と<span class="fw-bold">パスワード</span>を入力して「追加する」ボタンを押してください。</p>
-      <form action="" method="post">
         <label for="username">ユーザー名</label>
+        <p class="text-danger small mb-0"> 8字以上16字以下の半角英数字</p>
         <input type="text" class="form-control mb-2" name="username" id="username" value="<?php echo htmlspecialchars($username); ?>">
         <label for="password">パスワード</label>
+        <p class="text-danger small mb-0"> 8字以上16字以下の半角英数字</p>
         <input type="password" class="form-control mb-2" name="password" id="password">
         <input type="submit" class="btn btn-success px-5 mt-2" value="追加する">
       </form>
