@@ -259,17 +259,13 @@ else
             <?php foreach ($columns as $column): ?>
               <th>
                 <!-- ソート -->
-                <?php if ($column !== $sortColumn): ?> <!-- ワンクリック目は昇順 -->
-                <a href="entries.php?<?php echo http_build_query($parametersForSort); ?>&sort-column=<?php echo $column; ?>&direction=asc">
-                <?php echo $labels[$column]; ?>
-                </a>
-                <?php elseif ($direction === 'asc'): ?> <!-- 昇順の時は降順-->
+                <?php if ($column === $sortColumn && $direction !== 'desc'): ?> <!-- 昇順なら降順-->
                 <a href="entries.php?<?php echo http_build_query($parametersForSort); ?>&sort-column=<?php echo $column; ?>&direction=desc">
-                <?php echo $labels[$column]; ?>↑
+                <?php echo $labels[$column]; ?><?php if ($column === $sortColumn){echo '↑';} ?>
                 </a>
-                <?php else: ?> <!-- 降順の時（クリックされたカラムであり、かつ昇順でない時）は降順 -->
+                <?php else: ?> <!-- 初めてのクリック、または降順なら昇順 -->
                 <a href="entries.php?<?php echo http_build_query($parametersForSort); ?>&sort-column=<?php echo $column; ?>&direction=asc">
-                <?php echo $labels[$column]; ?>↓
+                <?php echo $labels[$column]; ?><?php if ($column === $sortColumn){echo '↓';} ?>
                 </a>
                 <?php endif; ?>
               </th>
