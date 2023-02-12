@@ -85,8 +85,11 @@ else
       <h1 class="text-center my-5">新規ユーザーを追加する</h1>
       <p class="text-center large">新規ユーザーを追加します。<span class="fw-bold">ユーザー名</span>と<span class="fw-bold">パスワード</span>を入力して「追加する」ボタンを押してください。</p>
       <form action="" method="post">
-      <?php if (filter_input(INPUT_SERVER, 'REQUEST_METHOD') === 'POST' && !empty($addUsersMessage)): ?>
+      <?php if (filter_input(INPUT_SERVER, 'REQUEST_METHOD') === 'POST' && !empty($addUsersMessage) && $addUsersMessage !== 'ユーザー名とパスワードの追加に成功しました。'): ?>
       <p class="alert alert-warning"><?php echo htmlspecialchars($addUsersMessage); ?></p>
+      <?php endif; ?>
+      <?php if (filter_input(INPUT_SERVER, 'REQUEST_METHOD') === 'POST' && !empty($addUsersMessage) && $addUsersMessage === 'ユーザー名とパスワードの追加に成功しました。'): ?>
+      <p class="alert alert-success"><?php echo htmlspecialchars($addUsersMessage); ?></p>
       <?php endif; ?>
     </header>
 
