@@ -20,14 +20,13 @@ if ($sessionToken !== $inputToken && filter_input(INPUT_SERVER,'REQUEST_METHOD')
 }
 else
 {
-  $stmt = $pdo->prepare('SELECT * FROM login WHERE username = :username AND password = :password');
+  $stmt = $pdo->prepare('SELECT * FROM login WHERE username = :username');
   $stmt->bindValue(':username', $username, PDO::PARAM_STR);
-  $stmt->bindValue(':password', $password, PDO::PARAM_STR);
   $stmt->execute();
 
   // ユーザー名とパスワードのチェック
   $result = $stmt->fetch(PDO::FETCH_ASSOC);
-  if ($result !== false)
+  if ($result !== false && password_verify($password, $result['password'])) // 検証
   {
     $_SESSION['username'] = $result['username'];
 
