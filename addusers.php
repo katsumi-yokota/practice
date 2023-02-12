@@ -1,19 +1,30 @@
 <?php
 // Basic認証
-$basicUser = 'userrrr';
-$basicPass = 'passs';
+$basicUser = 'user';
+$basicPass = 'pass';
 
 if(isset($_SERVER['PHP_AUTH_USER']) && ($_SERVER['PHP_AUTH_USER']==$basicUser && $_SERVER['PHP_AUTH_PW']==$basicPass))
 {
+  session_start();
   $authenticationMessage = ' さんがログイン中です。';
 } 
 else
 {
   header('WWW-Authenticate: Basic realm="Basic"');
   header('HTTP/1.0 401 Unauthorized - basic');
-  $authenticationMessage = '認証されていません。';
   exit();
 }
+
+// 自動ログアウト（タイムアウト）
+if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > 900)) 
+{
+
+  $_SESSION = array();
+  header('WWW-Authenticate: Basic realm="Basic"');
+  header('HTTP/1.0 401 Unauthorized - basic');
+  exit();
+}
+$_SESSION['LAST_ACTIVITY'] = time();
 
 // DBに保存
 $dsn = 'mysql:dbname=form-db;host=localhost;charset=utf8';
