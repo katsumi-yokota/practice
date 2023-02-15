@@ -1,6 +1,5 @@
 <?php
 session_start();
-echo $_SERVER['REQUEST_METHOD'];
 
 // DBに接続
 $dbUser = 'yamadasan';
@@ -11,60 +10,98 @@ $pdo = new PDO($dsn, $dbUser, $dbPass);
 $username = filter_input(INPUT_POST, 'username');
 $password = filter_input(INPUT_POST, 'password');
 
-// ログイン試行回数の制限のテスト
-$attempts = 1;
-$attempts = filter_input(INPUT_POST, 'attempts');
-$_SESSION['submit'] = '';
-$_SESSION['first_attemptted_at'] = '';
-if (filter_input(INPUT_POST, 'submit'))
+// ログイン試行回数の制限
+
+// ログイン制限の条件設定
+$stmt4 = $pdo->prepare('SELECT count, first_attemptted_at, last_attemptted_at FROM login_attempts WHERE username = :username');
+$stmt4->bindValue(':username', $username, PDO::PARAM_STR);
+$stmt4->execute();
+$loginAttemps = $stmt4->fetchAll();
+$firstAttempttedAt = new DateTime($loginAttemps[0]['first_attemptted_at']);
+$lastAttempttedAt = new DateTime($loginAttemps[0]['last_attemptted_at']);
+$interval = $lastAttempttedAt->diff($firstAttempttedAt); // 日時の差分
+$diffAttemptted = $interval->s + $interval->i * 60 + $interval->h * 60 * 60 + $interval->d * 24 * 60 * 60; // 秒・分・時間・日
+$loginAttempttedCount = $loginAttemps[0]['count'];
+$limitLogin = $diffAttemptted <= 180 && $loginAttempttedCount >= 3; // ログイン制限の条件
+
+// ログイン試行回数と制限時間
+$attempts = 0;
+$blockedUntil = 0;
+if (isset($_SESSION['attempts']))
 {
-  $_SESSION['submit'] = (int)$attempts++;
-}
-$_SESSION['first_attemptted_at'] = '';
-$firstAtempttedAt = '';
-if (isset($_SESSION['first_attemptted_at']) && filter_input(INPUT_POST, 'submit'))
-{
-  if ($_SESSION['submit'] === 0)
-  {
-    $_SESSION['first_attemptted_at'] = date('YmdHis');
-  }
-  if ($_SESSION['submit'] !== 0)
-  {
-    $_SESSION['first_attemptted_at'];
-  }
-}
-$_SESSION['last_attemptted_at'] = '';
-if (isset($_SESSION['last_attemptted_at']) && filter_input(INPUT_POST, 'submit'))
-{
-  $_SESSION['last_attemptted_at'] = date('YmdHis');
+  $attempts = (int)$_SESSION['attempts'];
 }
 
-$stmt = $pdo->prepare('SELECT * FROM login WHERE username = :username');
-$stmt->bindValue(':username', $username, PDO::PARAM_STR);
-$stmt->execute();
-if ($stmt->fetchAll() !== false)
+if (isset($_SESSION['blockedUntil'])) 
 {
+  $blockedUntil = (int)$_SESSION['blockedUntil'];
+}
+
+if (isset($_SESSION['first_attemptted_at']) && isset($_SESSION['last_attemptted_at'])) 
+{
+  if ($limitLogin)
+  {
+    $_SESSION['blockedUntil'] = date('YmdHis') + 180;
+  }
+}
+
+// ログイン試行回数とログイン試行日時
+if (filter_input(INPUT_POST, 'submit')) 
+{
+  if (date('YmdHis') >= $blockedUntil) 
+  {
+    $attempts++;
+    if ($attempts === 1) 
+    {
+      $_SESSION['first_attemptted_at'] = date('YmdHis');
+    }
+      $_SESSION['last_attemptted_at'] = date('YmdHis');
+  }
+}
+$_SESSION['attempts'] = $attempts;
+
+// データのリセット、アップデート
+if ($_SESSION['attempts'] > 3) // ログイン試行回数の上限
+{
+  $_SESSION['attempts'] = 0;
+}
+$stmt2 = $pdo->prepare('SELECT * FROM login WHERE username = :username');
+$stmt2->bindValue(':username', $username, PDO::PARAM_STR);
+$stmt2->execute();
+
+$limitLoginMessage = '';
+// ログイン試行
+if ($stmt2->fetchAll() !== false)
+{
+  // ログイン成功時
+  if (password_verify($password, $stmt2->fetchAll()[0]['password']))
+  {
+    $_SESSION['attempts'] = 0; // ログイン試行回数をリセット
+    $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = :count WHERE username = :username');
+    $stmt3->bindValue(':count', $_SESSION['attempts'], PDO::PARAM_STR);
+    $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
+    $stmt3->execute();
+  }
+  
+  // ログイン失敗時（ログイン試行回数の上限達成）
+  if ($limitLogin)
+  {
+    $limitLoginMessage = '誤った入力が繰り返しされたため、ログインを制限しました。しばらく時間をおいてから再度お試しください。';
+    // $_SESSION['attempts'] = 0;
+    $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = 0, first_attemptted_at = :first_attemptted_at, last_attemptted_at = :last_attemptted_at WHERE username = :username');
+    $stmt3->bindValue(':first_attemptted_at', $_SESSION['first_attemptted_at'], PDO::PARAM_INT);
+    $stmt3->bindValue(':last_attemptted_at', $_SESSION['last_attemptted_at'], PDO::PARAM_INT);
+    $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
+    $stmt3->execute();
+  }
+
+  // ログイン失敗時（ログイン試行回数の上限未達）
   $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = :count, first_attemptted_at = :first_attemptted_at, last_attemptted_at = :last_attemptted_at WHERE username = :username');
-  $stmt3->bindValue(':count', $_SESSION['submit'], PDO::PARAM_INT);
+  $stmt3->bindValue(':count', $_SESSION['attempts'], PDO::PARAM_INT);
   $stmt3->bindValue(':first_attemptted_at', $_SESSION['first_attemptted_at'], PDO::PARAM_INT);
   $stmt3->bindValue(':last_attemptted_at', $_SESSION['last_attemptted_at'], PDO::PARAM_INT);
   $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
   $stmt3->execute();
-}
-$stmt4 = $pdo->prepare('SELECT * FROM login_attempts WHERE count = :count');
-$stmt4->bindValue(':count', $_SESSION['submit'], PDO::PARAM_INT);
-$stmt4->execute();
-
-$limitLoginMessage = '';
-$result = $stmt4->fetch(PDO::FETCH_ASSOC);
-if ((int)$_SESSION['last_attemptted_at'] - (int)$_SESSION['first_attemptted_at'] >= 180 && $result['count'] >= 3)
-{
-  $stmt5 = $pdo->prepare('DELETE FROM login_attempts WHERE username = :username AND count = 3 LIMIT 1'); // 要修正
-  $stmt5->bindvalue(':username', $username, PDO::PARAM_STR);
-  $stmt5->execute();
-  session_unset();
-  session_destroy();
-  $limitLoginMessage = '誤った入力が繰り返しされたため、ログインを制限しました。しばらく時間をおいてから再度お試しください。';
 }
 
 // CSRF対策
@@ -83,26 +120,23 @@ else
 
   // ユーザー名とパスワードのチェック
   $result = $stmt->fetch(PDO::FETCH_ASSOC);
-  if ($result !== false && password_verify($password, $result['password'])) // 検証
-  {
-    $_SESSION['username'] = $result['username'];
+  // if ($limitLogin)
+  // {
+    // $limitLoginMessage = '誤った入力が繰り返しされたため、ログインを制限しました。しばらく時間をおいてから再度お試しください。';
+    if ($result !== false && password_verify($password, $result['password']))
+    {
+      $_SESSION['username'] = $result['username'];
 
-    // $stmt5 = $pdo->prepare('UPDATE login_attempts SET count = 0, last_attemptted_at = :last_attemptted_at WHERE username = :username');
-    $stmt5 = $pdo->prepare('UPDATE login_attempts SET count = 0 WHERE username = :username');
-    $stmt5->bindValue(':username', $username, PDO::PARAM_STR);
-    // $stmt5->bindValue(':first_attemptted_at', $_SESSION['first_attemptted_at']);
-    // $stmt5->bindValue(':last_attemptted_at', $_SESSION['last_attempted_at']);
-    $stmt5->execute();
-
-    http_response_code(200);
-    header('Location: entries.php');
-    exit;
-  }
-  elseif (filter_input(INPUT_SERVER, 'REQUEST_METHOD') !== 'GET' && $limitLoginMessage !== '誤った入力が繰り返しされたため、ログインを制限しました。しばらく時間をおいてから再度お試しください。')
-  {
-    $errorMessage = '正しいユーザー名またはパスワードを入力してください';
-    http_response_code(400);
-  }
+      http_response_code(200);
+      header('Location: entries.php');
+      exit;
+    }
+    elseif (filter_input(INPUT_SERVER, 'REQUEST_METHOD') !== 'GET' && $limitLoginMessage !== '誤った入力が繰り返しされたため、ログインを制限しました。しばらく時間をおいてから再度お試しください。')
+    {
+      $errorMessage = '正しいユーザー名またはパスワードを入力してください';
+      http_response_code(400);
+    }
+  // }
 }
 
 // トークン生成
