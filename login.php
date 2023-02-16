@@ -17,26 +17,29 @@ $stmt4 = $pdo->prepare('SELECT count, first_attemptted_at, last_attemptted_at FR
 $stmt4->bindValue(':username', $username, PDO::PARAM_STR);
 $stmt4->execute();
 $loginAttemps = $stmt4->fetchAll();
-if (isset($loginAttemps[0]['first_attemptted_at'])) 
+$limitLogin = '';
+$diffAttemptted = 0;
+if (isset($loginAttemps[0]['first_attemptted_at']) && isset($loginAttemps[0]['last_attemptted_at']))
 {
   $firstAttempttedAt = new DateTime($loginAttemps[0]['first_attemptted_at']);
-} 
-else 
-{
-  $firstAttempttedAt = new DateTime($loginAttemps[0]['first_attemptted_at']);
-}
-if (isset($loginAttemps[0]['last_attemptted_at'])) 
-{
   $lastAttempttedAt = new DateTime($loginAttemps[0]['last_attemptted_at']);
+  $interval = $lastAttempttedAt->diff($firstAttempttedAt); // 日時の差分
+  $diffAttemptted = $interval->s + $interval->i * 60 + $interval->h * 60 * 60 + $interval->d * 24 * 60 * 60; // 秒・分・時間・日
+  $loginAttempttedCount = $loginAttemps[0]['count'];
+  $limitLogin = $diffAttemptted <= 180 && $loginAttempttedCount >= 3; // ログイン制限の条件
 } 
-else 
-{
-  $lastAttempttedAt = new DateTime(date('YmdHis'));
-}
-$interval = $lastAttempttedAt->diff($firstAttempttedAt); // 日時の差分
-$diffAttemptted = $interval->s + $interval->i * 60 + $interval->h * 60 * 60 + $interval->d * 24 * 60 * 60; // 秒・分・時間・日
-$loginAttempttedCount = $loginAttemps[0]['count'];
-$limitLogin = $diffAttemptted <= 180 && $loginAttempttedCount >= 3; // ログイン制限の条件
+// else 
+// {
+//   $firstAttempttedAt = NULL;
+// }
+// if (isset($loginAttemps[0]['last_attemptted_at'])) 
+// {
+//   $lastAttempttedAt = new DateTime($loginAttemps[0]['last_attemptted_at']);
+// } 
+// else 
+// {
+//   $lastAttempttedAt = new DateTime(date('YmdHis'));
+// }
 
 // ログイン試行回数
 $attempts = 0;
@@ -59,7 +62,7 @@ if (isset($_SESSION['first_attemptted_at']) && isset($_SESSION['last_attemptted_
   }
 }
 
-// ログイン試行回数とログイン試行日時
+// ログイン試行回数とログイン試行日時(DBに保存用)
 if (filter_input(INPUT_POST, 'submit')) 
 {
   if (date('YmdHis') >= $blockedUntil) 
@@ -82,7 +85,8 @@ $stmt2->execute();
 // ログイン試行
 $limitLoginMessage = '';
 $passwordVerify = '';
-$passwordVerify = password_verify($password, $stmt2->fetchAll()[0]['password']);
+$passwordVerify = password_verify($password, $stmt2->fetch()['password']);
+// var_dump($passwordVerify);
 if ($stmt2->fetchAll() !== false)
 {
   // パスワードが合っている、かつ、ログイン制限がかかっている
@@ -125,14 +129,14 @@ if ($stmt2->fetchAll() !== false)
     $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
     $stmt3->execute();
   }
-}
 
-// 最後のログイン試行から24時間以上経過している場合、ログイン試行回数をリセット
-if ($diffAttemptted >= 86400)
-{
-  $stmt = $pdo->prepare('UPDATE tlogin_attempts SET attempts = 0, first_attemptted_at = NOW(), last_attemptted_at = NOW() WHERE username = :username');
-  $stmt->bindValue(':username', $username, PDO::PARAM_STR);
-  $stmt->execute();
+  // 最後のログイン試行から24時間以上経過している場合、ログイン試行回数をリセット
+  if ($diffAttemptted >= 86400)
+  {
+    $stmt = $pdo->prepare('UPDATE tlogin_attempts SET attempts = 0, first_attemptted_at = NOW(), last_attemptted_at = NOW() WHERE username = :username');
+    $stmt->bindValue(':username', $username, PDO::PARAM_STR);
+    $stmt->execute();
+  }
 }
 
 // CSRF対策
