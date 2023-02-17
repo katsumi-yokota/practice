@@ -21,25 +21,12 @@ $limitLogin = '';
 $diffAttemptted = 0;
 if (isset($loginAttemps[0]['first_attemptted_at']) && isset($loginAttemps[0]['last_attemptted_at']))
 {
-  $firstAttempttedAt = new DateTime($loginAttemps[0]['first_attemptted_at']);
-  $lastAttempttedAt = new DateTime($loginAttemps[0]['last_attemptted_at']);
-  $interval = $lastAttempttedAt->diff($firstAttempttedAt); // 日時の差分
-  $diffAttemptted = $interval->s + $interval->i * 60 + $interval->h * 60 * 60 + $interval->d * 24 * 60 * 60; // 秒・分・時間・日
+  $firstAttempttedAt = strtotime($loginAttemps[0]['first_attemptted_at']);
+  $lastAttempttedAt = strtotime($loginAttemps[0]['last_attemptted_at']);
+  $diffAttemptted = $lastAttempttedAt - $firstAttempttedAt;
   $loginAttempttedCount = $loginAttemps[0]['count'];
   $limitLogin = $diffAttemptted <= 180 && $loginAttempttedCount >= 3; // ログイン制限の条件
-} 
-// else 
-// {
-//   $firstAttempttedAt = NULL;
-// }
-// if (isset($loginAttemps[0]['last_attemptted_at'])) 
-// {
-//   $lastAttempttedAt = new DateTime($loginAttemps[0]['last_attemptted_at']);
-// } 
-// else 
-// {
-//   $lastAttempttedAt = new DateTime(date('YmdHis'));
-// }
+}
 
 // ログイン試行回数
 $attempts = 0;
@@ -77,49 +64,35 @@ if (filter_input(INPUT_POST, 'submit'))
 }
 $_SESSION['attempts'] = $attempts;
 
-// データのリセット、アップデート
+// ログイン試行
 $stmt2 = $pdo->prepare('SELECT * FROM login WHERE username = :username');
 $stmt2->bindValue(':username', $username, PDO::PARAM_STR);
 $stmt2->execute();
 
-// ログイン試行
 $limitLoginMessage = '';
 $passwordVerify = '';
 $passwordVerify = password_verify($password, $stmt2->fetch()['password']);
-// var_dump($passwordVerify);
 if ($stmt2->fetchAll() !== false)
 {
-  // パスワードが合っている、かつ、ログイン制限がかかっている
-  if ($passwordVerify && $limitLogin)
+  // ログイン制限がかかっている
+  if ($limitLogin)
   {
-    echo 'パスワードが合っている、かつ、ログイン制限がかかっている（確認用）';
+    echo 'ログイン制限がかかっている（確認用）';
     $limitLoginMessage = '誤った入力が繰り返しされたため、ログインを制限しました。しばらく時間をおいてから再度お試しください。';
     $stmt3 = $pdo->prepare('UPDATE login_attempts SET first_attemptted_at = NOW(), last_attemptted_at = NOW() WHERE username = :username');
     $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
     $stmt3->execute();
   }
-
-  // パスワードが合っている、かつ、ログイン制限がかかっていない→ログイン成功
-  if ($passwordVerify && !$limitLogin)
+  // ログイン制限がかかっていない、かつ、パスワードが合っている→ログイン成功
+  elseif ($passwordVerify)
   {
     $_SESSION['attempts'] = 0; // ログイン試行回数をリセット
     $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = 0 WHERE username = :username');
     $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
     $stmt3->execute();
   }
-  
-  // パスワードが合っていない、かつ、ログイン制限がかかっている
-  if (!$passwordVerify && $limitLogin)
-  {
-    echo 'パスワードが合っていない、かつ、ログイン制限がかかっている（確認用）';
-    $limitLoginMessage = '誤った入力が繰り返しされたため、ログインを制限しました。しばらく時間をおいてから再度お試しください。';
-    $stmt3 = $pdo->prepare('UPDATE login_attempts SET first_attemptted_at = NOW(), last_attemptted_at = NOW() WHERE username = :username');
-    $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
-    $stmt3->execute();
-  }
-
-  // パスワードが合っていない、かつ、ログイン制限がかかっていない
-  if (!$passwordVerify && !$limitLogin)
+  // ログイン制限がかかっていない、かつ、パスワードが合っていない
+  else
   {
     echo 'パスワードが合っていない、かつ、ログイン制限がかかっていない（確認用）';
     $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = :count, first_attemptted_at = :first_attemptted_at, last_attemptted_at = :last_attemptted_at WHERE username = :username');
@@ -129,7 +102,7 @@ if ($stmt2->fetchAll() !== false)
     $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
     $stmt3->execute();
   }
-
+  
   // 最後のログイン試行から24時間以上経過している場合、ログイン試行回数をリセット
   if ($diffAttemptted >= 86400)
   {
