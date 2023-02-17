@@ -16,7 +16,7 @@ $password = filter_input(INPUT_POST, 'password');
 $stmt4 = $pdo->prepare('SELECT count, first_attemptted_at, last_attemptted_at FROM login_attempts WHERE username = :username');
 $stmt4->bindValue(':username', $username, PDO::PARAM_STR);
 $stmt4->execute();
-$loginAttemps = $stmt4->fetchAll();
+$loginAttemps = $stmt4->fetchAll(); // 整合性×
 $limitLogin = '';
 $diffAttemptted = 0;
 if (isset($loginAttemps[0]['first_attemptted_at']) && isset($loginAttemps[0]['last_attemptted_at']))
@@ -28,41 +28,24 @@ if (isset($loginAttemps[0]['first_attemptted_at']) && isset($loginAttemps[0]['la
   $limitLogin = $diffAttemptted <= 180 && $loginAttempttedCount >= 3; // ログイン制限の条件
 }
 
-// ログイン試行回数
-$attempts = 0;
-if (isset($_SESSION['attempts']))
+// ログイン試行回数と日時
+$attempts = filter_input(INPUT_POST ,'attempts');
+$storeFirstAttempttedAt = date('YmdHis');
+if (isset($storeFirstAttempttedAt))
 {
-  $attempts = (int)$_SESSION['attempts'];
+  $storeFirstAttempttedAt;
 }
-
-// 制限時間
-$blockedUntil = 0;
-if (isset($_SESSION['blockedUntil'])) 
-{
-  $blockedUntil = (int)$_SESSION['blockedUntil'];
-}
-if (isset($_SESSION['first_attemptted_at']) && isset($_SESSION['last_attemptted_at'])) 
-{
-  if ($limitLogin)
-  {
-    $_SESSION['blockedUntil'] = date('YmdHis') + 180;
-  }
-}
-
-// ログイン試行回数とログイン試行日時(DBに保存用)
 if (filter_input(INPUT_POST, 'submit')) 
 {
-  if (date('YmdHis') >= $blockedUntil) 
+  $attempts++;
+  if ($attempts == 1)
   {
-    $attempts++;
-    if ($attempts === 1)
-    {
-      $_SESSION['first_attemptted_at'] = date('YmdHis');
-    }
-      $_SESSION['last_attemptted_at'] = date('YmdHis');
+    $storeFirstAttempttedAt = date('YmdHis');
   }
+    $storeLastAttempttedAt = date('YmdHis');
 }
-$_SESSION['attempts'] = $attempts;
+// 最後のログイン試行から一定時間後、ログイン試行回数をリセット
+$attempts = time() - strtotime($loginAttemps[0]['last_attemptted_at']) >= 180 ?  0 : $attempts;
 
 // ログイン試行
 $stmt2 = $pdo->prepare('SELECT * FROM login WHERE username = :username');
@@ -79,15 +62,16 @@ if ($stmt2->fetchAll() !== false)
   {
     echo 'ログイン制限がかかっている（確認用）';
     $limitLoginMessage = '誤った入力が繰り返しされたため、ログインを制限しました。しばらく時間をおいてから再度お試しください。';
-    $stmt3 = $pdo->prepare('UPDATE login_attempts SET first_attemptted_at = NOW(), last_attemptted_at = NOW() WHERE username = :username');
+    $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = :count, first_attemptted_at = NOW(), last_attemptted_at = NOW() WHERE username = :username');
+    $stmt3->bindValue(':count', $attempts, PDO::PARAM_STR);
     $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
     $stmt3->execute();
   }
   // ログイン制限がかかっていない、かつ、パスワードが合っている→ログイン成功
   elseif ($passwordVerify)
   {
-    $_SESSION['attempts'] = 0; // ログイン試行回数をリセット
-    $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = 0 WHERE username = :username');
+    $_SESSION['attempts'] = 0; // リセット
+    $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = 0, first_attemptted_at = NOW(), last_attemptted_at = NOW() WHERE username = :username');
     $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
     $stmt3->execute();
   }
@@ -96,19 +80,11 @@ if ($stmt2->fetchAll() !== false)
   {
     echo 'パスワードが合っていない、かつ、ログイン制限がかかっていない（確認用）';
     $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = :count, first_attemptted_at = :first_attemptted_at, last_attemptted_at = :last_attemptted_at WHERE username = :username');
-    $stmt3->bindValue(':count', $_SESSION['attempts'], PDO::PARAM_INT);
-    $stmt3->bindValue(':first_attemptted_at', $_SESSION['first_attemptted_at'], PDO::PARAM_INT);
-    $stmt3->bindValue(':last_attemptted_at', $_SESSION['last_attemptted_at'], PDO::PARAM_INT);
+    $stmt3->bindValue(':count', $attempts, PDO::PARAM_INT);
+    $stmt3->bindValue(':first_attemptted_at', $storeFirstAttempttedAt, PDO::PARAM_INT);
+    $stmt3->bindValue(':last_attemptted_at', $storeLastAttempttedAt, PDO::PARAM_INT);
     $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
     $stmt3->execute();
-  }
-  
-  // 最後のログイン試行から24時間以上経過している場合、ログイン試行回数をリセット
-  if ($diffAttemptted >= 86400)
-  {
-    $stmt = $pdo->prepare('UPDATE tlogin_attempts SET attempts = 0, first_attemptted_at = NOW(), last_attemptted_at = NOW() WHERE username = :username');
-    $stmt->bindValue(':username', $username, PDO::PARAM_STR);
-    $stmt->execute();
   }
 }
 
