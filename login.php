@@ -45,7 +45,8 @@ if (filter_input(INPUT_POST, 'submit'))
     $storeLastAttempttedAt = date('YmdHis');
 }
 // 最後のログイン試行から一定時間後、ログイン試行回数をリセット
-$attempts = time() - strtotime($loginAttemps[0]['last_attemptted_at']) >= 180 ?  0 : $attempts;
+// $attempts = time() - strtotime($loginAttemps[0]['last_attemptted_at']) >= 180 ?  0 : $attempts;
+$attempts = time() - strtotime($loginAttemps[0]['last_attemptted_at']) >= 180 ?  0 : 0;
 
 // ログイン試行
 $stmt2 = $pdo->prepare('SELECT * FROM login WHERE username = :username');
