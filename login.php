@@ -2,10 +2,7 @@
 session_start();
 
 // DBに接続
-$dbUser = 'yamadasan';
-$dbPass = '1q2w3e4r5t';
-$dsn = 'mysql:dbname=form-db;host=localhost;charset=utf8';
-$pdo = new PDO($dsn, $dbUser, $dbPass);
+require_once('pdo.php');
 
 $username = filter_input(INPUT_POST, 'username');
 $password = filter_input(INPUT_POST, 'password');
@@ -100,7 +97,7 @@ $stmt5->bindValue(':username', $username, PDO::PARAM_STR);
 $stmt5->execute();
 if ($stmt5->fetch() === false)
 {
-  $stmt6 = $pdo->prepare('INSERT INTO login_attempts (username, count, first_attemptted_at, last_attemptted_at) VALUES (:username, 0, NOW(), NOW())');
+  $stmt6 = $pdo->prepare('INSERT INTO login_attempts (username, count, first_attemptted_at, last_attemptted_at) VALUE (:username, 0, NOW(), NOW())');
   $stmt6->bindValue(':username', $username, PDO::PARAM_STR);
   $stmt6->execute();
 }
