@@ -1,6 +1,8 @@
 <?php
-$dbUser = 'yamadasan';
-$dbPass = '1q2w3e4r5t';
-$dsn = 'mysql:dbname=form-db;host=localhost;charset=utf8';
+$config = require_once 'config.php';
+$dbUser = $config['db_user'];
+$dbPass = $config['db_pass'];
+$dbHost = $config['db_host'];
+$dsn = "mysql:dbname=form-db;host=$dbHost;charset=utf8";
 $pdo = new PDO($dsn, $dbUser, $dbPass);
 ?>
