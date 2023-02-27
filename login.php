@@ -9,11 +9,21 @@ $password = filter_input(INPUT_POST, 'password');
 
 // ログイン試行回数の制限
 
+// 共通化のテスト
+function matchLoginUsername($username)
+{
+  global $pdo;
+  global $stmt;
+  $stmt = $pdo->prepare('SELECT * FROM login WHERE username = :username');
+  $stmt->bindValue(':username', $username, PDO::PARAM_STR);
+  $stmt->execute();
+}
+
 // ログイン制限の条件設定
-$stmt4 = $pdo->prepare('SELECT count, first_attemptted_at, last_attemptted_at FROM login_attempts WHERE username = :username');
-$stmt4->bindValue(':username', $username, PDO::PARAM_STR);
-$stmt4->execute();
-$loginAttemps = $stmt4->fetchAll(); // 整合性×
+$stmt2 = $pdo->prepare('SELECT count, first_attemptted_at, last_attemptted_at FROM login_attempts WHERE username = :username');
+$stmt2->bindValue(':username', $username, PDO::PARAM_STR);
+$stmt2->execute();
+$loginAttemps = $stmt2->fetchAll(); // 整合性×
 $limitLogin = '';
 $diffAttemptted = 0;
 if (isset($loginAttemps[0]['first_attemptted_at']) && isset($loginAttemps[0]['last_attemptted_at']))
@@ -32,6 +42,11 @@ if (isset($storeFirstAttempttedAt))
 {
   $storeFirstAttempttedAt;
 }
+$storeLastAttempttedAt = date('YmdHis');
+if (isset($storeLastAttempttedAt))
+{
+  $storeLastAttempttedAt;
+}
 if (filter_input(INPUT_POST, 'submit')) 
 {
   $attempts++;
@@ -49,17 +64,14 @@ if (isset($loginAttemps[0]))
 }
 
 // ログイン試行
-$stmt2 = $pdo->prepare('SELECT * FROM login WHERE username = :username');
-$stmt2->bindValue(':username', $username, PDO::PARAM_STR);
-$stmt2->execute();
-
+matchLoginUsername($username);
 $limitLoginMessage = '';
 $passwordVerify = '';
-if (isset($stmt2->fetch()['password']))
+if (isset($stmt->fetch()['password']) && $stmt->fetch() !== false)
 {
-  $passwordVerify = password_verify($password, $stmt2->fetch()['password']);
+  $passwordVerify = password_verify($password, $stmt->fetch()['password']);
 }
-if ($stmt2->fetchAll() !== false)
+if ($stmt->fetchAll() !== false)
 {
   // ログイン制限がかかっている
   if ($limitLogin)
@@ -92,14 +104,14 @@ if ($stmt2->fetchAll() !== false)
 }
 
 // 名前がなければインサート
-$stmt5 = $pdo->prepare('SELECT * FROM login_attempts WHERE username = :username');
-$stmt5->bindValue(':username', $username, PDO::PARAM_STR);
-$stmt5->execute();
-if ($stmt5->fetch() === false)
+$stmt4 = $pdo->prepare('SELECT * FROM login_attempts WHERE username = :username');
+$stmt4->bindValue(':username', $username, PDO::PARAM_STR);
+$stmt4->execute();
+if ($stmt4->fetch() === false)
 {
-  $stmt6 = $pdo->prepare('INSERT INTO login_attempts (username, count, first_attemptted_at, last_attemptted_at) VALUE (:username, 0, NOW(), NOW())');
-  $stmt6->bindValue(':username', $username, PDO::PARAM_STR);
-  $stmt6->execute();
+  $stmt5 = $pdo->prepare('INSERT INTO login_attempts (username, count, first_attemptted_at, last_attemptted_at) VALUE (:username, 0, NOW(), NOW())');
+  $stmt5->bindValue(':username', $username, PDO::PARAM_STR);
+  $stmt5->execute();
 }
 
 // CSRF対策
@@ -112,9 +124,7 @@ if ($sessionToken !== $inputToken && filter_input(INPUT_SERVER,'REQUEST_METHOD')
 }
 else
 {
-  $stmt = $pdo->prepare('SELECT * FROM login WHERE username = :username');
-  $stmt->bindValue(':username', $username, PDO::PARAM_STR);
-  $stmt->execute();
+  matchLoginUsername($username);
 
   // ユーザー名とパスワードのチェック
   $result = $stmt->fetch(PDO::FETCH_ASSOC);
