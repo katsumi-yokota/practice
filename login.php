@@ -14,45 +14,33 @@ $password = filter_input(INPUT_POST, 'password');
 // オブジェクト指向で書き換え
 class Login
 {
-  private $pdo;
-  private $stmt;
 
   public function __construct($pdo) 
   {
     $this->pdo = $pdo;
   }
 
-  public function searchUsername($username) 
+  public function searchByUsername($username)
   {
     $this->stmt = $this->pdo->prepare('SELECT * FROM login WHERE username = :username');
     $this->stmt->bindValue(':username', $username, PDO::PARAM_STR);
     $this->stmt->execute();
+    return $this->stmt->fetch();
   }
-}
 
-function bindUsernameAndExecute($username)
-{
-  global $stmt3;
-  $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
-  $stmt3->execute();
-}
-
-// ログイン制限の条件設定
-class LimitLogin extends Login
-{
+  // ログイン制限の条件設定
   public function limitLogin($username)
   {
     $this->stmt2 = $this->pdo->prepare('SELECT count, first_attemptted_at, last_attemptted_at FROM login_attempts WHERE username = :username');
     $this->stmt2->bindValue(':username', $username, PDO::PARAM_STR);
     $this->stmt2->execute();
+    return $this->stmt2->fetchAll(PDO::FETCH_ASSOC);
+    $limitLoginForPDO = new Login($pdo);
+    $limitLoginForPDO->searchByUsername($username);
+    limitLogin($username);
+    $loginAttemps = $stmt2->fetchAll(); // 整合性
   }
 }
-
-$pdo = new PDO($dsn, $dbUser, $dbPass);
-$limitLoginForPDO = new LimitLogin($pdo);
-$limitLoginForPDO->searchUsername($username);
-limitLogin($username);
-$loginAttemps = $stmt2->fetchAll(); // 整合性
 $limitLogin = '';
 $diffAttemptted = 0;
 if (isset($loginAttemps[0]['first_attemptted_at']) && isset($loginAttemps[0]['last_attemptted_at']))
@@ -93,42 +81,40 @@ if (isset($loginAttemps[0]))
 }
 
 // ログイン試行
-$pdo = new PDO($dsn, $dbUser, $dbPass);
 $login = new Login($pdo);
-$login->searchUsername($username);
+$record = $login->searchByUsername($username);
 $limitLoginMessage = '';
 $passwordVerify = '';
-if (isset($stmt->fetch()['password']) && $stmt->fetch() !== false)
+if (isset($record['password'])) 
 {
-  $passwordVerify = password_verify($password, $stmt->fetch()['password']);
+  $passwordVerify = $record['password'];
 }
-if ($stmt->fetchAll() !== false)
+if ($record !== false)
 {
+  $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = :count, first_attemptted_at = :first_attemptted_at, last_attemptted_at = NOW() WHERE username = :username');
   // ログイン制限がかかっている
   if ($limitLogin)
   {
-    echo 'ログイン制限がかかっている（確認）';
+    echo 'ログイン制限がかかっている（確認用）';
     $limitLoginMessage = '誤った入力が繰り返しされたため、ログインを制限しました。しばらく時間をおいてから再度お試しください。';
-    $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = :count, first_attemptted_at = NOW(), last_attemptted_at = NOW() WHERE username = :username');
-    $stmt3->bindValue(':count', $attempts, PDO::PARAM_STR);
-    bindUsernameAndExecute($username);
+    $stmt3->bindValue(':count', $attempts, PDO::PARAM_INT);
+    $stmt3->bindValue(':first_attemptted_at', date('YmdHis'), PDO::PARAM_INT);
   }
-  // ログイン制限がかかっていない、かつ、パスワードが合っている(成功)
+  // ログイン制限がかかっていない、かつ、パスワードが合っている→ログイン成功
   elseif ($passwordVerify)
   {
-    $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = 0, first_attemptted_at = NOW(), last_attemptted_at = NOW() WHERE username = :username');
-    bindUsernameAndExecute($username);
+    $stmt3->bindValue(':count', 0, PDO::PARAM_INT);
+    $stmt3->bindValue(':first_attemptted_at', date('YmdHis'), PDO::PARAM_INT);
   }
   // ログイン制限がかかっていない、かつ、パスワードが合っていない
   else
   {
-    echo 'パスワードが合っていない、かつ、ログイン制限がかかっていない（確認）';
-    $stmt3 = $pdo->prepare('UPDATE login_attempts SET count = :count, first_attemptted_at = :first_attemptted_at, last_attemptted_at = :last_attemptted_at WHERE username = :username');
+    echo 'パスワードが合っていない、かつ、ログイン制限がかかっていない（確認用）';
     $stmt3->bindValue(':count', $attempts, PDO::PARAM_INT);
     $stmt3->bindValue(':first_attemptted_at', $storeFirstAttempttedAt, PDO::PARAM_INT);
-    $stmt3->bindValue(':last_attemptted_at', $storeLastAttempttedAt, PDO::PARAM_INT);
-    bindUsernameAndExecute($username);
   }
+    $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
+    $stmt3->execute();
 }
 // 名前がなければインサート
 $stmt4 = $pdo->prepare('SELECT * FROM login_attempts WHERE username = :username');
@@ -137,7 +123,8 @@ $stmt4->execute();
 if ($stmt4->fetch() === false)
 {
   $stmt3 = $pdo->prepare('INSERT INTO login_attempts (username, count, first_attemptted_at, last_attemptted_at) VALUE (:username, 1, NOW(), NOW())');
-  bindUsernameAndExecute($username);
+  $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
+  $stmt3->execute();
 }
 
 /*
@@ -152,10 +139,11 @@ if ($sessionToken !== $inputToken && filter_input(INPUT_SERVER,'REQUEST_METHOD')
 }
 else
 {
-  searchUsername($username);
+  $login = new Login($pdo);
+  $login->searchByUsername($username);
 
   // ユーザー名とパスワードのチェック
-  $result = $stmt->fetch(PDO::FETCH_ASSOC);
+  $result = $record;
   if ($result !== false && password_verify($password, $result['password']))
   {
     if ($limitLogin)
