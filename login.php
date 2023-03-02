@@ -41,12 +41,10 @@ if (isset($loginAttemps[0]))
 // ログイン試行
 $isNameExistOnLogin = $login->searchByUsername($username);
 $limitLoginMessage = '';
-var_dump($isNameExistOnLogin);
 // テーブル「login」にusernameがある
-if (is_array($isNameExistOnLogin) && count($isNameExistOnLogin) > 0)
-// if ($isNameExistOnLogin !== false)
+if ($isNameExistOnLogin !== false)
 {
-  echo 'ある!(確認用)';
+  echo 'テーブル「Login」にある!';
   // ログイン制限がかかっている
   if ($limitLogin)
   {
@@ -72,15 +70,17 @@ if (is_array($isNameExistOnLogin) && count($isNameExistOnLogin) > 0)
     $stmt3->execute();
 }
 
-// テーブル「login_attempts」にusernameがなければ新規登録
+// テーブル「login_attempts」にusernameがなければ、同テーブル及びテーブル「login」に新規登録
 $isNameExistOnLoginAttempts = $login->insertNewRecords($username);
 if ($isNameExistOnLoginAttempts === false)
 {
-  echo 'テーブル「login_attempts」にusernameがないため新規登録（確認用）';
   $stmt3 = $pdo->prepare('INSERT INTO login_attempts (username, count, first_attemptted_at, last_attemptted_at) VALUE (:username, 1, NOW(), NOW())');
-  $stmt3 = $pdo->prepare('INSERT IGNORE INTO login (username) VALUE (:username)');
   $stmt3->bindValue(':username', $username, PDO::PARAM_STR);
   $stmt3->execute();
+
+  $stmt5 = $pdo->prepare('INSERT INTO login (username) VALUE (:username)');
+  $stmt5->bindValue(':username', $username, PDO::PARAM_STR);
+  $stmt5->execute();
 }
 
 /*
